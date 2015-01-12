@@ -1,0 +1,24 @@
+# cst_lexicon.c
+../../build/i386-darwin14.1.0/obj/src/lexicon/cst_lexicon.o: cst_lexicon.c ../../include/cst_features.h \
+  ../../include/cst_alloc.h ../../include/cst_val.h \
+  ../../include/cst_file.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_lexicon.h \
+  ../../include/cst_item.h ../../include/cst_lts.h \
+  ../../include/cst_tokenstream.h
+
+# cst_lts.c
+../../build/i386-darwin14.1.0/obj/src/lexicon/cst_lts.o: cst_lts.c ../../include/cst_features.h \
+  ../../include/cst_alloc.h ../../include/cst_val.h \
+  ../../include/cst_file.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_lts.h \
+  ../../include/cst_endian.h
+
+# cst_lts_rewrites.c
+../../build/i386-darwin14.1.0/obj/src/lexicon/cst_lts_rewrites.o: cst_lts_rewrites.c ../../include/cst_string.h \
+  ../../include/cst_val.h ../../include/cst_file.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_lts_rewrites.h
+

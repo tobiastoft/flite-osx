@@ -1,0 +1,77 @@
+# cmu_time_awb.c
+../../build/i386-darwin14.1.0/obj/lang/cmu_time_awb/cmu_time_awb.o: cmu_time_awb.c ../../include/flite.h \
+  ../../include/cst_string.h ../../include/cst_regex.h \
+  ../../include/cst_file.h ../../include/cst_val.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_features.h ../../include/cst_item.h \
+  ../../include/cst_relation.h ../../include/cst_utterance.h \
+  ../../include/cst_wave.h ../../include/cst_endian.h \
+  ../../include/cst_track.h ../../include/cst_cart.h \
+  ../../include/cst_phoneset.h ../../include/cst_voice.h \
+  ../../include/cst_audio.h ../../include/cst_hrg.h \
+  ../../include/cst_utt_utils.h ../../include/cst_lexicon.h \
+  ../../include/cst_lts.h ../../include/cst_synth.h \
+  ../../include/cst_tokenstream.h ../../include/cst_units.h \
+  ../../include/cst_sts.h ../../include/cst_clunits.h \
+  ../../include/cst_viterbi.h ../../include/cst_math.h \
+  ../../lang/usenglish/usenglish.h ../../lang/cmulex/cmu_lex.h
+
+# cmu_time_awb_clunits.c
+../../build/i386-darwin14.1.0/obj/lang/cmu_time_awb/cmu_time_awb_clunits.o: cmu_time_awb_clunits.c \
+  ../../include/cst_clunits.h ../../include/cst_wave.h \
+  ../../include/cst_file.h ../../include/cst_error.h \
+  ../../include/cst_alloc.h ../../include/cst_endian.h \
+  ../../include/cst_val.h ../../include/cst_string.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_cart.h ../../include/cst_features.h \
+  ../../include/cst_item.h ../../include/cst_relation.h \
+  ../../include/cst_utterance.h ../../include/cst_viterbi.h \
+  ../../include/cst_math.h ../../include/cst_track.h \
+  ../../include/cst_sts.h ../../include/cst_audio.h \
+  ../../include/cst_hrg.h
+
+# cmu_time_awb_cart.c
+../../build/i386-darwin14.1.0/obj/lang/cmu_time_awb/cmu_time_awb_cart.o: cmu_time_awb_cart.c ../../include/cst_string.h \
+  ../../include/cst_cart.h ../../include/cst_file.h \
+  ../../include/cst_val.h ../../include/cst_error.h \
+  ../../include/cst_alloc.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_features.h \
+  ../../include/cst_item.h ../../include/cst_relation.h \
+  ../../include/cst_utterance.h ../../include/cst_regex.h
+
+# cmu_time_awb_mcep.c
+../../build/i386-darwin14.1.0/obj/lang/cmu_time_awb/cmu_time_awb_mcep.o: cmu_time_awb_mcep.c ../../include/cst_clunits.h \
+  ../../include/cst_wave.h ../../include/cst_file.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_endian.h ../../include/cst_val.h \
+  ../../include/cst_string.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_cart.h \
+  ../../include/cst_features.h ../../include/cst_item.h \
+  ../../include/cst_relation.h ../../include/cst_utterance.h \
+  ../../include/cst_viterbi.h ../../include/cst_math.h \
+  ../../include/cst_track.h ../../include/cst_sts.h \
+  ../../include/cst_audio.h ../../include/cst_hrg.h
+
+# cmu_time_awb_lpc.c
+../../build/i386-darwin14.1.0/obj/lang/cmu_time_awb/cmu_time_awb_lpc.o: cmu_time_awb_lpc.c ../../include/cst_clunits.h \
+  ../../include/cst_wave.h ../../include/cst_file.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_endian.h ../../include/cst_val.h \
+  ../../include/cst_string.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_cart.h \
+  ../../include/cst_features.h ../../include/cst_item.h \
+  ../../include/cst_relation.h ../../include/cst_utterance.h \
+  ../../include/cst_viterbi.h ../../include/cst_math.h \
+  ../../include/cst_track.h ../../include/cst_sts.h \
+  ../../include/cst_audio.h ../../include/cst_hrg.h
+
+# cmu_time_awb_lex_entry.c
+../../build/i386-darwin14.1.0/obj/lang/cmu_time_awb/cmu_time_awb_lex_entry.o: cmu_time_awb_lex_entry.c \
+  ../../include/cst_string.h ../../include/cst_lexicon.h \
+  ../../include/cst_item.h ../../include/cst_file.h \
+  ../../include/cst_features.h ../../include/cst_alloc.h \
+  ../../include/cst_val.h ../../include/cst_error.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_lts.h
+

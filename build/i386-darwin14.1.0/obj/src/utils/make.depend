@@ -1,0 +1,62 @@
+# cst_alloc.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_alloc.o: cst_alloc.c ../../include/cst_file.h \
+  ../../include/cst_alloc.h ../../include/cst_error.h
+
+# cst_error.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_error.o: cst_error.c ../../include/cst_file.h \
+  ../../include/cst_error.h
+
+# cst_string.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_string.o: cst_string.c ../../include/cst_alloc.h \
+  ../../include/cst_string.h
+
+# cst_wchar.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_wchar.o: cst_wchar.c ../../include/cst_wchar.h \
+  ../../include/cst_alloc.h ../../include/cst_string.h
+
+# cst_tokenstream.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_tokenstream.o: cst_tokenstream.c ../../include/cst_tokenstream.h \
+  ../../include/cst_alloc.h ../../include/cst_string.h \
+  ../../include/cst_file.h
+
+# cst_val.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_val.o: cst_val.c ../../include/cst_math.h ../../include/cst_file.h \
+  ../../include/cst_val.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h
+
+# cst_features.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_features.o: cst_features.c ../../include/cst_error.h \
+  ../../include/cst_features.h ../../include/cst_alloc.h \
+  ../../include/cst_val.h ../../include/cst_file.h \
+  ../../include/cst_string.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h
+
+# cst_endian.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_endian.o: cst_endian.c ../../include/cst_alloc.h \
+  ../../include/cst_endian.h
+
+# cst_socket.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_socket.o: cst_socket.c ../../include/cst_socket.h \
+  ../../include/cst_error.h
+
+# cst_val_const.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_val_const.o: cst_val_const.c ../../include/cst_val.h \
+  ../../include/cst_file.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_features.h
+
+# cst_val_user.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_val_user.o: cst_val_user.c ../../include/cst_val.h \
+  ../../include/cst_file.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h
+
+# cst_args.c
+../../build/i386-darwin14.1.0/obj/src/utils/cst_args.o: cst_args.c ../../include/cst_tokenstream.h \
+  ../../include/cst_alloc.h ../../include/cst_string.h \
+  ../../include/cst_file.h ../../include/cst_features.h \
+  ../../include/cst_val.h ../../include/cst_error.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h
+

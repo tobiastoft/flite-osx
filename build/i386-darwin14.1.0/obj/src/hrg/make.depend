@@ -1,0 +1,42 @@
+# cst_utterance.c
+../../build/i386-darwin14.1.0/obj/src/hrg/cst_utterance.o: cst_utterance.c ../../include/cst_alloc.h \
+  ../../include/cst_utterance.h ../../include/cst_file.h \
+  ../../include/cst_val.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_features.h \
+  ../../include/cst_item.h ../../include/cst_relation.h
+
+# cst_relation.c
+../../build/i386-darwin14.1.0/obj/src/hrg/cst_relation.o: cst_relation.c ../../include/cst_item.h \
+  ../../include/cst_file.h ../../include/cst_features.h \
+  ../../include/cst_alloc.h ../../include/cst_val.h \
+  ../../include/cst_string.h ../../include/cst_error.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_relation.h ../../include/cst_utterance.h
+
+# cst_item.c
+../../build/i386-darwin14.1.0/obj/src/hrg/cst_item.o: cst_item.c ../../include/cst_alloc.h ../../include/cst_item.h \
+  ../../include/cst_file.h ../../include/cst_features.h \
+  ../../include/cst_val.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_relation.h \
+  ../../include/cst_utterance.h
+
+# cst_ffeature.c
+../../build/i386-darwin14.1.0/obj/src/hrg/cst_ffeature.o: cst_ffeature.c ../../include/cst_alloc.h \
+  ../../include/cst_item.h ../../include/cst_file.h \
+  ../../include/cst_features.h ../../include/cst_val.h \
+  ../../include/cst_string.h ../../include/cst_error.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_relation.h ../../include/cst_utterance.h \
+  ../../include/cst_tokenstream.h
+
+# cst_rel_io.c
+../../build/i386-darwin14.1.0/obj/src/hrg/cst_rel_io.o: cst_rel_io.c ../../include/cst_file.h \
+  ../../include/cst_tokenstream.h ../../include/cst_alloc.h \
+  ../../include/cst_string.h ../../include/cst_item.h \
+  ../../include/cst_features.h ../../include/cst_val.h \
+  ../../include/cst_error.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_relation.h \
+  ../../include/cst_utterance.h
+

@@ -1,0 +1,16 @@
+# find_sts_main.c
+../build/i386-darwin14.1.0/obj/tools/find_sts_main.o: find_sts_main.c ../include/cst_wave.h \
+  ../include/cst_file.h ../include/cst_error.h ../include/cst_alloc.h \
+  ../include/cst_endian.h ../include/cst_val.h ../include/cst_string.h \
+  ../include/cst_val_defs.h ../include/cst_val_const.h \
+  ../include/cst_track.h ../include/cst_sigpr.h ../include/cst_sts.h \
+  ../include/cst_audio.h ../include/cst_hrg.h ../include/cst_features.h \
+  ../include/cst_item.h ../include/cst_relation.h \
+  ../include/cst_utterance.h
+
+# flite_sort_main.c
+../build/i386-darwin14.1.0/obj/tools/flite_sort_main.o: flite_sort_main.c ../include/cst_val.h \
+  ../include/cst_file.h ../include/cst_string.h ../include/cst_error.h \
+  ../include/cst_alloc.h ../include/cst_val_defs.h \
+  ../include/cst_val_const.h ../include/cst_tokenstream.h
+

@@ -1,0 +1,45 @@
+# cst_cg.c
+../../build/i386-darwin14.1.0/obj/src/cg/cst_cg.o: cst_cg.c ../../include/cst_cg.h ../../include/cst_cart.h \
+  ../../include/cst_file.h ../../include/cst_val.h \
+  ../../include/cst_string.h ../../include/cst_error.h \
+  ../../include/cst_alloc.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_features.h \
+  ../../include/cst_item.h ../../include/cst_relation.h \
+  ../../include/cst_utterance.h ../../include/cst_track.h \
+  ../../include/cst_endian.h ../../include/cst_wave.h \
+  ../../include/cst_audio.h ../../include/cst_hrg.h \
+  ../../include/cst_synth.h ../../include/cst_tokenstream.h \
+  ../../include/cst_voice.h ../../include/cst_utt_utils.h
+
+# cst_mlsa.c
+../../build/i386-darwin14.1.0/obj/src/cg/cst_mlsa.o: cst_mlsa.c ../../include/cst_alloc.h \
+  ../../include/cst_string.h ../../include/cst_math.h \
+  ../../include/cst_track.h ../../include/cst_file.h \
+  ../../include/cst_error.h ../../include/cst_endian.h \
+  ../../include/cst_val.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_wave.h \
+  ../../include/cst_audio.h ../../include/cst_hrg.h \
+  ../../include/cst_features.h ../../include/cst_item.h \
+  ../../include/cst_relation.h ../../include/cst_utterance.h cst_vc.h \
+  ../../include/cst_cg.h ../../include/cst_cart.h \
+  ../../include/cst_synth.h ../../include/cst_tokenstream.h \
+  ../../include/cst_voice.h cst_mlsa.h
+
+# cst_mlpg.c
+../../build/i386-darwin14.1.0/obj/src/cg/cst_mlpg.o: cst_mlpg.c ../../include/cst_alloc.h \
+  ../../include/cst_string.h ../../include/cst_math.h \
+  ../../include/cst_track.h ../../include/cst_file.h \
+  ../../include/cst_error.h ../../include/cst_endian.h \
+  ../../include/cst_val.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_wave.h cst_vc.h \
+  cst_mlpg.h ../../include/cst_cg.h ../../include/cst_cart.h \
+  ../../include/cst_features.h ../../include/cst_item.h \
+  ../../include/cst_relation.h ../../include/cst_utterance.h \
+  ../../include/cst_audio.h ../../include/cst_hrg.h \
+  ../../include/cst_synth.h ../../include/cst_tokenstream.h \
+  ../../include/cst_voice.h
+
+# cst_vc.c
+../../build/i386-darwin14.1.0/obj/src/cg/cst_vc.o: cst_vc.c ../../include/cst_alloc.h ../../include/cst_string.h \
+  ../../include/cst_math.h cst_vc.h
+

@@ -1,0 +1,88 @@
+# cst_synth.c
+../../build/i386-darwin14.1.0/obj/src/synth/cst_synth.o: cst_synth.c ../../include/cst_hrg.h ../../include/cst_file.h \
+  ../../include/cst_val.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_features.h ../../include/cst_item.h \
+  ../../include/cst_relation.h ../../include/cst_utterance.h \
+  ../../include/cst_cart.h ../../include/cst_tokenstream.h \
+  ../../include/cst_utt_utils.h ../../include/cst_wave.h \
+  ../../include/cst_endian.h ../../include/cst_lexicon.h \
+  ../../include/cst_lts.h ../../include/cst_units.h \
+  ../../include/cst_sts.h ../../include/cst_audio.h \
+  ../../include/cst_synth.h ../../include/cst_voice.h \
+  ../../include/cst_phoneset.h
+
+# cst_utt_utils.c
+../../build/i386-darwin14.1.0/obj/src/synth/cst_utt_utils.o: cst_utt_utils.c ../../include/cst_synth.h \
+  ../../include/cst_hrg.h ../../include/cst_file.h \
+  ../../include/cst_val.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_features.h ../../include/cst_item.h \
+  ../../include/cst_relation.h ../../include/cst_utterance.h \
+  ../../include/cst_tokenstream.h ../../include/cst_voice.h \
+  ../../include/cst_utt_utils.h ../../include/cst_wave.h \
+  ../../include/cst_endian.h
+
+# cst_voice.c
+../../build/i386-darwin14.1.0/obj/src/synth/cst_voice.o: cst_voice.c ../../include/cst_alloc.h \
+  ../../include/cst_voice.h ../../include/cst_file.h \
+  ../../include/cst_val.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_features.h \
+  ../../include/cst_utterance.h ../../include/cst_item.h \
+  ../../include/cst_relation.h
+
+# cst_phoneset.c
+../../build/i386-darwin14.1.0/obj/src/synth/cst_phoneset.o: cst_phoneset.c ../../include/cst_val.h \
+  ../../include/cst_file.h ../../include/cst_string.h \
+  ../../include/cst_error.h ../../include/cst_alloc.h \
+  ../../include/cst_val_defs.h ../../include/cst_val_const.h \
+  ../../include/cst_utterance.h ../../include/cst_features.h \
+  ../../include/cst_item.h ../../include/cst_relation.h \
+  ../../include/cst_phoneset.h
+
+# cst_ffeatures.c
+../../build/i386-darwin14.1.0/obj/src/synth/cst_ffeatures.o: cst_ffeatures.c ../../include/cst_hrg.h \
+  ../../include/cst_file.h ../../include/cst_val.h \
+  ../../include/cst_string.h ../../include/cst_error.h \
+  ../../include/cst_alloc.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_features.h \
+  ../../include/cst_item.h ../../include/cst_relation.h \
+  ../../include/cst_utterance.h ../../include/cst_phoneset.h \
+  ../../include/cst_regex.h
+
+# cst_ssml.c
+../../build/i386-darwin14.1.0/obj/src/synth/cst_ssml.o: cst_ssml.c ../../include/flite.h ../../include/cst_string.h \
+  ../../include/cst_regex.h ../../include/cst_file.h \
+  ../../include/cst_val.h ../../include/cst_error.h \
+  ../../include/cst_alloc.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_features.h \
+  ../../include/cst_item.h ../../include/cst_relation.h \
+  ../../include/cst_utterance.h ../../include/cst_wave.h \
+  ../../include/cst_endian.h ../../include/cst_track.h \
+  ../../include/cst_cart.h ../../include/cst_phoneset.h \
+  ../../include/cst_voice.h ../../include/cst_audio.h \
+  ../../include/cst_hrg.h ../../include/cst_utt_utils.h \
+  ../../include/cst_lexicon.h ../../include/cst_lts.h \
+  ../../include/cst_synth.h ../../include/cst_tokenstream.h \
+  ../../include/cst_units.h ../../include/cst_sts.h
+
+# flite.c
+../../build/i386-darwin14.1.0/obj/src/synth/flite.o: flite.c ../../include/cst_tokenstream.h \
+  ../../include/cst_alloc.h ../../include/cst_string.h \
+  ../../include/cst_file.h ../../include/flite.h \
+  ../../include/cst_regex.h ../../include/cst_val.h \
+  ../../include/cst_error.h ../../include/cst_val_defs.h \
+  ../../include/cst_val_const.h ../../include/cst_features.h \
+  ../../include/cst_item.h ../../include/cst_relation.h \
+  ../../include/cst_utterance.h ../../include/cst_wave.h \
+  ../../include/cst_endian.h ../../include/cst_track.h \
+  ../../include/cst_cart.h ../../include/cst_phoneset.h \
+  ../../include/cst_voice.h ../../include/cst_audio.h \
+  ../../include/cst_hrg.h ../../include/cst_utt_utils.h \
+  ../../include/cst_lexicon.h ../../include/cst_lts.h \
+  ../../include/cst_synth.h ../../include/cst_units.h \
+  ../../include/cst_sts.h
+
