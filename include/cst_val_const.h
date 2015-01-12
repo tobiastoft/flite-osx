@@ -145,6 +145,11 @@ extern const cst_val val_int_16;
 extern const cst_val val_int_17;
 extern const cst_val val_int_18;
 extern const cst_val val_int_19;
+extern const cst_val val_int_20;
+extern const cst_val val_int_21;
+extern const cst_val val_int_22;
+extern const cst_val val_int_23;
+extern const cst_val val_int_24;
 
 extern const cst_val val_string_0; 
 extern const cst_val val_string_1; 
@@ -166,6 +171,11 @@ extern const cst_val val_string_16;
 extern const cst_val val_string_17;
 extern const cst_val val_string_18;
 extern const cst_val val_string_19;
+extern const cst_val val_string_20;
+extern const cst_val val_string_21;
+extern const cst_val val_string_22;
+extern const cst_val val_string_23;
+extern const cst_val val_string_24;
 
 #else
 /* Only GCC seems to currently support the C99 standard for giving      */
@@ -173,21 +183,30 @@ extern const cst_val val_string_19;
 /* things to be const, and to be small structures this is really useful */
 /* thus for compilers not supporting no_union_initization we use other  */
 /* structure that we know (hope ?) are the same size and use agressive  */
-/* casting. The goal here is wholly justified by the method here isn't  */
+/* casting. The goal here is wholly justified but the method here isn't */
 /* pretty                                                               */
 
 /* These structures are defined *solely* to get round initialization    */
-/* problems if you need to use these in any code you are using your are */
+/* problems if you need to use these in any code you are using, you are */
 /* unquestionably doing the wrong thing                                 */
 typedef struct cst_val_atom_struct_float {
 #ifdef WORDS_BIGENDIAN
     short ref_count;
     short type;  /* order is here important */
 #else
+#if (defined(__x86_64__) || defined(_M_X64))
+    int type;  /* order is here important */
+    int ref_count;
+#else
     short type;  /* order is here important */
     short ref_count;
 #endif
+#endif
+#if (defined(__x86_64__) || defined(_M_X64))
+    double fval;
+#else
     float fval;
+#endif
 } cst_val_float;
 
 typedef struct cst_val_atom_struct_int {
@@ -195,10 +214,19 @@ typedef struct cst_val_atom_struct_int {
     short ref_count;
     short type;  /* order is here important (and unintuitive) */
 #else
+#if (defined(__x86_64__) || defined(_M_X64))
+    int type;  /* order is here important */
+    int ref_count;
+#else
     short type;  /* order is here important */
     short ref_count;
 #endif
+#endif
+#if (defined(__x86_64__) || defined(_M_X64))
+    long long ival;
+#else
     int ival;
+#endif
 } cst_val_int;
 
 typedef struct cst_val_atom_struct_void {
@@ -206,8 +234,13 @@ typedef struct cst_val_atom_struct_void {
     short ref_count;
     short type;  /* order is here important */
 #else
+#if (defined(__x86_64__) || defined(_M_X64))
+    int type;  /* order is here important */
+    int ref_count;
+#else
     short type;  /* order is here important */
     short ref_count;
+#endif
 #endif
     void *vval;
 } cst_val_void;
@@ -245,6 +278,11 @@ extern const cst_val_int val_int_16;
 extern const cst_val_int val_int_17;
 extern const cst_val_int val_int_18;
 extern const cst_val_int val_int_19;
+extern const cst_val_int val_int_20;
+extern const cst_val_int val_int_21;
+extern const cst_val_int val_int_22;
+extern const cst_val_int val_int_23;
+extern const cst_val_int val_int_24;
 
 extern const cst_val_void val_string_0; 
 extern const cst_val_void val_string_1; 
@@ -266,6 +304,11 @@ extern const cst_val_void val_string_16;
 extern const cst_val_void val_string_17;
 extern const cst_val_void val_string_18;
 extern const cst_val_void val_string_19;
+extern const cst_val_void val_string_20;
+extern const cst_val_void val_string_21;
+extern const cst_val_void val_string_22;
+extern const cst_val_void val_string_23;
+extern const cst_val_void val_string_24;
 
 #endif
 
@@ -298,6 +341,11 @@ extern const cst_val_void val_string_19;
 #define VAL_INT_17 (cst_val *)&val_int_17
 #define VAL_INT_18 (cst_val *)&val_int_18
 #define VAL_INT_19 (cst_val *)&val_int_19
+#define VAL_INT_20 (cst_val *)&val_int_20
+#define VAL_INT_21 (cst_val *)&val_int_21
+#define VAL_INT_22 (cst_val *)&val_int_22
+#define VAL_INT_23 (cst_val *)&val_int_23
+#define VAL_INT_24 (cst_val *)&val_int_24
 
 const cst_val *val_int_n(int n);
 
@@ -321,6 +369,11 @@ const cst_val *val_int_n(int n);
 #define VAL_STRING_17 (cst_val *)&val_string_17
 #define VAL_STRING_18 (cst_val *)&val_string_18
 #define VAL_STRING_19 (cst_val *)&val_string_19
+#define VAL_STRING_20 (cst_val *)&val_string_20
+#define VAL_STRING_21 (cst_val *)&val_string_21
+#define VAL_STRING_22 (cst_val *)&val_string_22
+#define VAL_STRING_23 (cst_val *)&val_string_23
+#define VAL_STRING_24 (cst_val *)&val_string_24
 
 const cst_val *val_string_n(int n);
 

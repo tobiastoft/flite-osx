@@ -65,6 +65,20 @@ M68KCC=
 M68KCLAGS=
 WINDRES=
 
+CHROMEBIN_PREFIX=
+
+if test "$target_os" = "chrome" ; then
+    case "$TARGET_CPU" in
+	i386*)
+	    CFLAGS="$CFLAGS -m32"
+	    CHROMEBIN_PREFIX=" $CHROME_NDK/toolchain/linux_x86_newlib/bin/i686-nacl"
+	    ;;
+	x86_64*)
+	    CFLAGS="$CFLAGS -m64"
+	    CHROMEBIN_PREFIX=" $CHROME_NDK/toolchain/linux_x86_newlib/bin/x86_64-nacl"
+esac
+fi
+
 case "$target_os" in
         palmos*)
 		shared=false
@@ -132,6 +146,64 @@ dnl         ;;
                 DLLWRAP="${MINGWPREF}dllwrap"
                 NM="${MINGWPREF}nm"
         ;;
+        android*)
+                # For Android with Android NDK
+                # http://developer.android.com/sdk/ndk/index.html
+		shared=false
+
+		# We target our compilation to android-14 (4.0) platform
+		ANDROID_NDK_PLATFORM_PATH="$ANDROID_NDK/platforms/android-14"
+
+		ANDROID_GCC_VERSION=4.6
+
+		if test "$target_cpu" = "armeabi" 
+                then
+		   ANDROID_TOOLCHAIN="arm-linux-androideabi-$ANDROID_GCC_VERSION"
+		   ANDROID_NDK_SYSROOT="$ANDROID_NDK_PLATFORM_PATH/arch-arm"
+		   ANDROIDBIN="$ANDROID_NDK/toolchains/arm-linux-androideabi-$ANDROID_GCC_VERSION/prebuilt/linux-x86/bin/arm-linux-androideabi"
+      		   CFLAGS="$CFLAGS -fpic -mthumb -O3 -DANDROID --sysroot=$ANDROID_NDK_SYSROOT"
+                fi
+
+		if test "$target_cpu" = "armeabiv7a" 
+                then
+		   ANDROID_TOOLCHAIN="arm-linux-androideabi-$ANDROID_GCC_VERSION"
+		   ANDROID_NDK_SYSROOT="$ANDROID_NDK_PLATFORM_PATH/arch-arm"
+		   ANDROIDBIN="$ANDROID_NDK/toolchains/arm-linux-androideabi-$ANDROID_GCC_VERSION/prebuilt/linux-x86/bin/arm-linux-androideabi"
+      		   CFLAGS="$CFLAGS -fpic -march=armv7-a -mfloat-abi=softfp -O3 -DANDROID --sysroot=$ANDROID_NDK_SYSROOT"
+		   LDFLAGS="$LDFLAGS -Wl,--fix-cortex-a8"
+                fi
+
+		if test "$target_cpu" = "x86"
+		then
+		   ANDROID_TOOLCHAIN="x86-$ANDROID_GCC_VERSION"
+		   ANDROID_NDK_SYSROOT="$ANDROID_NDK_PLATFORM_PATH/arch-x86"
+		   ANDROIDBIN="$ANDROID_NDK/toolchains/x86-$ANDROID_GCC_VERSION/prebuilt/linux-x86/bin/i686-linux-android"
+      		   CFLAGS="$CFLAGS -fpic -O3 -DANDROID --sysroot=$ANDROID_NDK_SYSROOT"
+		fi
+
+		if test "$target_cpu" = "mips"
+		then
+		   ANDROID_TOOLCHAIN="mipsel-linux-android-$ANDROID_GCC_VERSION"
+		   ANDROID_NDK_SYSROOT="$ANDROID_NDK_PLATFORM_PATH/arch-mips"
+		   ANDROIDBIN="$ANDROID_NDK/toolchains/mipsel-linux-android-$ANDROID_GCC_VERSION/prebuilt/linux-x86/bin/mipsel-linux-android"
+      		   CFLAGS="$CFLAGS -fpic -O3 -DANDROID --sysroot=$ANDROID_NDK_SYSROOT"
+		fi
+
+		# Common to all android variants
+                CC="${ANDROIDBIN}-gcc"
+                RANLIB="${ANDROIDBIN}-ranlib"
+                AR="${ANDROIDBIN}-ar"
+                NM="${ANDROIDBIN}-nm"
+
+        ;;
+        chrome*)
+		shared=false
+		CFLAGS="$CFLAGS -DCST_NO_SOCKETS"
+                CC="${CHROMEBIN_PREFIX}-gcc"
+                RANLIB="${CHROMEBIN_PREFIX}-ranlib"
+                AR="${CHROMEBIN_PREFIX}-ar"
+                NM="${CHROMEBIN_PREFIX}-nm"
+        ;;
         uclinux*)
                 LDFLAGS="$LDFLAGS -Wl,-elf2flt"
         ;;
@@ -167,6 +239,30 @@ AC_SUBST(HOST_CPU)
 
 SHFLAGS=
 OTHERLIBS=
+
+dnl For OpenPandora and other (softfloat) ARMs with neon
+if grep -q Pandora /proc/cpuinfo
+then
+   CFLAGS="$CFLAGS -DPANDORA -mcpu=cortex-a8 -mfpu=neon -mfloat-abi=softfp"
+fi
+
+withpic=false
+AC_ARG_WITH( pic, [  --with-pic           with pic ],
+        withpic=$with_pic )
+if test "x$with_pic" = "xyes"; then
+   case "$target_os" in
+	linux*)
+		CFLAGS="$CFLAGS -fPIC"
+        ;;
+	solaris*)
+		CFLAGS="$CFLAGS -fPIC"
+        ;;
+	*)
+		CFLAGS="$CFLAGS -fPIC"
+	;;
+   esac
+fi
+
 if test "$shared" = true; then
    case "$target_os" in
 	linux*|k*bsd*-gnu|gnu*)
@@ -225,17 +321,34 @@ dnl read-only mappings work.
 dnl
 AC_CHECK_FUNC(mmap,MMAPTYPE=posix)
 
+dnl Force no mmap for chrome
+if test "$target_os" = "chrome"
+then
+    MMAPTYPE=none
+fi
+
 dnl AC_CHECK_FUNC doesn't seem to work for Win32 API calls...
 if test "x$MMAPTYPE" = x; then
    case "$target_os" in
 	cygwin*|mingw*)
 		MMAPTYPE=win32
 	;;
+	android*)
+		MMAPTYPE=posix
+	;;
  	*)
 		MMAPTYPE=none
 	;;
    esac
 fi
+
+dnl
+dnl allow the user to override the one detected above
+dnl
+AC_ARG_WITH( mmap,
+	[  --with-mmap          with specific mmap support (none posix win32) ],
+        MMAPTYPE=$with_mmap )
+
 AC_SUBST(MMAPTYPE)
 
 dnl stdio type, palmos/wince are different
@@ -293,6 +406,16 @@ case "$target_os" in
         AUDIODEFS=-DCST_AUDIO_NONE
         AUDIOLIBS=
      ;;
+     android*)
+        AUDIODRIVER="none"
+        AUDIODEFS=-DCST_AUDIO_NONE
+        AUDIOLIBS=
+     ;;
+     chrome*)
+	AUDIODRIVER="none"
+	AUDIODEFS=-DCST_AUDIO_NONE
+	AUDIOLIBS=
+     ;;	
      *)
      ;;
 esac
@@ -302,7 +425,8 @@ dnl allow the user to override the one detected above
 dnl
 AC_ARG_WITH( audio,
 	[  --with-audio          with specific audio support (none linux freebsd etc) ],
-        AUDIODRIVER=$with_audio )
+        AUDIODRIVER=$with_audio
+	AUDIODEFS="" )
 
 if test "x$AUDIODEFS" = x; then
     case "$AUDIODRIVER" in
@@ -314,6 +438,11 @@ if test "x$AUDIODEFS" = x; then
             AUDIODRIVER="alsa"
 	    AUDIODEFS=-DCST_AUDIO_ALSA
             AUDIOLIBS=-lasound
+	    ;;
+	pa|pulseaudio)
+            AUDIODRIVER="pulseaudio"
+	    AUDIODEFS=-DCST_AUDIO_PULSEAUDIO
+            AUDIOLIBS='-lpulse-simple -lpulse'
 	    ;;
 	*bsd)
 	    AUDIODRIVER=oss

@@ -62,13 +62,20 @@ int cst_socket_close(int socket)
 #else
 #include <stdio.h>
 #include <stdlib.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 #include <string.h>
 #include <sys/types.h>
+#ifndef _MSC_VER
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#else
+#include <io.h>
+#include <WinSock2.h>
+#endif
 #include "cst_socket.h"
 #include "cst_error.h"
 

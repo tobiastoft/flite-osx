@@ -61,6 +61,6 @@ include $(TOP)/config/common_make_rules
 regexes:
 	./make_us_regexes $(BINDIR) >us_regexes.h
 
-us_pos_cart.c: us_pos.tree
+us_pos_cart.c: 
 	$(ESTDIR)/../festival/bin/festival -b $(FLITEDIR)/tools/make_cart.scm $(FLITEDIR)/tools/make_pos.scm 
 

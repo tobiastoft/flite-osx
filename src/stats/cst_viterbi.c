@@ -294,6 +294,10 @@ int viterbi_result(cst_viterbi *vd,const char *n)
     for (; p; p=p->from)
 	if (p->cand)
 	{
+#if 1
+	    item_set_int(p->cand->item,"cl_total_score",p->score);
+	    item_set_int(p->cand->item,"cl_cand_score",p->cand->score);
+#endif
 	    item_set(p->cand->item,n,p->cand->val);
 	}
     return TRUE;

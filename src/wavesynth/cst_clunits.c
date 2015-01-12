@@ -33,6 +33,7 @@
 /*             Authors:  Alan W Black (awb@cs.cmu.edu)                   */
 /*    			 David Huggins-Daines (dhd@cepstral.com)	 */
 /*               Date:  April 2001                                       */
+/*                      and more updates in 2009                         */
 /*************************************************************************/
 /*                                                                       */
 /*  clunits waveform synthesis                                           */
@@ -50,7 +51,7 @@
 #include "cst_track.h"
 #include "cst_sigpr.h"
 
-#define CLUNITS_DEBUG 0
+/* #define CLUNITS_DEBUG 1 */
 
 #ifndef CLUNITS_DEBUG
 #define CLUNITS_DEBUG 0
@@ -187,13 +188,13 @@ static cst_utterance *clunits_select(cst_utterance *utt)
 
 	if (item_feat_int(u,"unit_start") > item_feat_int(u, "unit_end"))
 	{
-            /*	    feat_print(stdout,s->contents->features); */
+            /*	    cst_feat_print(stdout,s->contents->features); */
 	    cst_errmsg("start %d end %d\n",
 		    item_feat_int(u,"unit_start"), item_feat_int(u, "unit_end"));
-	    /* feat_print(stdout,u->contents->features); */
+	    /* cst_feat_print(stdout,u->contents->features); */
 	}
 
-	DPRINTF(0, ("selected %d=%s_%d %d/%d\n",
+	DPRINTF(0, ("selected %d=%s_%d %d %d\n",
 		    unit_entry, 
 		    UNIT_TYPE(clunit_db,unit_entry),
 		    UNIT_INDEX(clunit_db,unit_entry),
@@ -206,6 +207,11 @@ static cst_utterance *clunits_select(cst_utterance *utt)
     return utt;
 }
 
+/* This is used to add incremental target weighting to candidates */
+/* It has been tuned but as the candidates are not actually ordered */
+/* doing this is meaningless -- but *is* better */
+#define clunits_target_weight 70
+
 static cst_vit_cand *cl_cand(cst_item *i,cst_viterbi *vd)
 {
     const char *unit_type;
@@ -215,6 +221,7 @@ static cst_vit_cand *cl_cand(cst_item *i,cst_viterbi *vd)
     const cst_val *clist,*c;
     cst_vit_cand *p,*all,*gt,*lc;
     cst_clunit_db *clunit_db;
+    int ccc;
 
     clunit_db = val_clunit_db(feat_val(vd->f,"clunit_db"));
     unit_type = item_feat_string(i,"clunit_name");
@@ -222,14 +229,15 @@ static cst_vit_cand *cl_cand(cst_item *i,cst_viterbi *vd)
     /* get tree */
     clist = cart_interpret(i,clunit_get_tree(clunit_db,unit_type));
 
-    all = 0;
+    all = 0; ccc = clunits_target_weight;
     for (c=clist; c; c=val_cdr(c))
     {
 	idx = clunit_get_unit_index(clunit_db, unit_type, val_int(val_car(c)));
 	p = new_vit_cand();
 	p->next = all;
 	p->item = i;
-	p->score = 0;
+	p->score = ccc;
+        ccc += clunits_target_weight;
 	vit_cand_set_int(p,idx);
 	all = p;
     }
@@ -281,6 +289,8 @@ static cst_vit_path *cl_path(cst_vit_path *p,
         dfunc = frame_distance;
     else if (cludb->mcep->sts_paged)
         dfunc = frame_distance;
+    else if (cludb->mcep->frames)
+        dfunc = frame_distance;
     else
 	dfunc = frame_distanceb;
 
@@ -307,7 +317,7 @@ static cst_vit_path *cl_path(cst_vit_path *p,
 	    cost = 0;
     }
 
-    cost *= 5; /* magic number ("continuity weight") */
+    cost *= 1; /* magic number ("continuity weight") */
     np->state = c->pos;
     if (p==0)
 	np->score = cost + c->score;
@@ -509,7 +519,7 @@ static int frame_distanceb(const cst_clunit_db *cludb,
     return r;
 }
 
-static int clunit_get_unit_type_index(cst_clunit_db *cludb, const char *name)
+int clunit_get_unit_type_index(cst_clunit_db *cludb, const char *name)
 {
     int start,end,mid,c;
 
@@ -529,7 +539,6 @@ static int clunit_get_unit_type_index(cst_clunit_db *cludb, const char *name)
 	    start = mid + 1;
     }
 
-    cst_errmsg("clunits: unit type \"%s\" not found\n",name);
     return -1;
 }
 
@@ -553,6 +562,9 @@ static void clunit_set_unit_name(cst_item *s,cst_clunit_db *clunit_db)
 	char *cname;
 	cname = (clunit_db->unit_name_func)(s);
 	item_set_string(s,"clunit_name",cname);
+
+        /* printf("awb_debug clunit_name %s\n",cname); */
+
 	cst_free(cname);
     }
     else

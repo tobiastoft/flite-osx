@@ -79,9 +79,9 @@ void lpc2ref(const float *lpc, float *rfc, int order)
 
 void ref2lpc(const float *rfc, float *lpc, int order)
 {
-    // Here we use Christopher Longet Higgin's algorithm converted to
-    // an equivalent by awb.  Its doesn't have the reverse order or
-    // negation requirement.
+    /* Here we use Christopher Longet Higgin's algorithm converted to */
+    /* an equivalent by awb.  Its doesn't have the reverse order or   */
+    /* negation requirement. */
     float a,b;
     int n,k;
 

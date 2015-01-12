@@ -39,6 +39,7 @@
 /*************************************************************************/
 #include "cst_alloc.h"
 #include "cst_voice.h"
+#include "flite.h"
 
 CST_VAL_REGISTER_TYPE(voice,cst_voice)
 
@@ -56,11 +57,15 @@ void delete_voice(cst_voice *v)
 {
     if (v)
     {
+        if (feat_present(v->features,"voxdata"))
+        {
+            if (feat_present(v->features,"clunit_db"))
+                flite_munmap_clunit_voxdata(v);
+        }
+
 	delete_features(v->features);
 	delete_features(v->ffunctions);
-        /* do not delete any dbs in the voice */
-        /* they are probably const and not deletable -- at least */
-        /* that is true at present */
 	cst_free(v);
     }
 }
+

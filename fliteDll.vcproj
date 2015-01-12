@@ -524,6 +524,22 @@
 				>
 			</File>
 			<File
+				RelativePath=".\src\speech\g721.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\speech\g723_24.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\speech\g723_40.c"
+				>
+			</File>
+			<File
+				RelativePath=".\src\speech\g72x.c"
+				>
+			</File>
+			<File
 				RelativePath=".\lang\cmu_pashto_lang\ps_fbmap.c"
 				>
 			</File>
@@ -823,6 +839,10 @@
 			</File>
 			<File
 				RelativePath=".\include\flite.h"
+				>
+			</File>
+			<File
+				RelativePath=".\src\speech\g72x.h"
 				>
 			</File>
 			<File

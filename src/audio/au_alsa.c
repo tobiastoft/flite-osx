@@ -55,7 +55,7 @@
 
 
 /*static char *pcm_dev_name = "hw:0,0"; */
-static char *pcm_dev_name ="default";
+static const char *pcm_dev_name ="default";
 
 static inline void print_pcm_state(snd_pcm_t *handle, char *msg)
 {
@@ -63,7 +63,7 @@ static inline void print_pcm_state(snd_pcm_t *handle, char *msg)
 		  snd_pcm_state_name(snd_pcm_state(handle)));
 }
 
-cst_audiodev *audio_open_alsa(int sps, int channels, cst_audiofmt fmt)
+cst_audiodev *audio_open_alsa(unsigned int sps, int channels, cst_audiofmt fmt)
 {
   cst_audiodev *ad;
   unsigned 	int real_rate;
@@ -179,6 +179,8 @@ cst_audiodev *audio_open_alsa(int sps, int channels, cst_audiofmt fmt)
 
   /* Make sure the device is ready to accept data */
   assert(snd_pcm_state(pcm_handle) == SND_PCM_STATE_PREPARED);
+
+  /* snd_pcm_hw_params_free(hwparams); */
 
   /* Write hardware parameters to flite audio device data structure */
   ad = cst_alloc(cst_audiodev, 1);

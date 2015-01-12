@@ -110,7 +110,6 @@ int main(int argc, char **argv)
 	fprintf(stderr,"no text specified\n");
 	exit(-1);
     }
-
     
     flite_init();
     v = register_cmu_us_no_wave(NULL);
@@ -131,6 +130,10 @@ int main(int argc, char **argv)
     }
 
     printf("\n");
+
+    delete_utterance(u);
+    delete_features(args);
+    delete_val(files);
     
     return 0;
 }

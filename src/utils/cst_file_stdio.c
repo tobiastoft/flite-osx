@@ -33,6 +33,7 @@
 /*************************************************************************/
 /*                                                                       */
 /*  File I/O wrappers for normal platforms.                              */
+/*  Added support for urls (and libcurl) Nov 2011 (awb@cs.cmu.edu)       */
 /*                                                                       */
 /*************************************************************************/
 
@@ -40,6 +41,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include "cst_file.h"
+#include "cst_string.h"
 #include "cst_error.h"
 #include "cst_alloc.h"
 
@@ -47,8 +49,9 @@ cst_file cst_fopen(const char *path, int mode)
 {
     char cmode[4];
 
-    /* This is kind of hacky. */
-    if ((mode & CST_OPEN_WRITE) && (mode & CST_OPEN_READ))
+    if (cst_urlp(path))
+        return cst_url_open(path);
+    else if ((mode & CST_OPEN_WRITE) && (mode & CST_OPEN_READ))
 	strcpy(cmode, "r+");
     else if ((mode & CST_OPEN_APPEND) && (mode & CST_OPEN_READ))
 	strcpy(cmode, "a+");
@@ -77,15 +80,15 @@ long cst_fread(cst_file fh, void *buf, long size, long count)
 
 long cst_filesize(cst_file fh)
 {
-	/* FIXME: guaranteed to break on text files on Win32 */
-	long pos, epos;
+    /* FIXME: guaranteed to break on text files on Win32 */
+    long pos, epos;
 
-	pos = ftell(fh);
-	fseek(fh, 0, SEEK_END);
-	epos = ftell(fh);
-	fseek(fh, pos, SEEK_SET);
+    pos = ftell(fh);
+    fseek(fh, 0, SEEK_END);
+    epos = ftell(fh);
+    fseek(fh, pos, SEEK_SET);
 
-	return epos;
+    return epos;
 }
 
 int cst_fgetc(cst_file fh)
@@ -109,10 +112,12 @@ long cst_fseek(cst_file fh, long pos, int whence)
     else if (whence == CST_SEEK_ENDREL)
 	w = SEEK_END;
 
-    return fseek(fh, pos, w);
+    fseek(fh, pos, w);
+
+    return ftell(fh);
 }
 
-int cst_fprintf(cst_file fh, char *fmt, ...)
+int cst_fprintf(cst_file fh, const char *fmt, ...)
 {
     va_list args;
     int rv;

@@ -91,13 +91,19 @@ void delete_features(cst_features *f)
 	    delete_val(n->val);
 	    cst_local_free(f->ctx,n);
 	}
+        delete_val(f->owned_strings);
 	cst_local_free(f->ctx,f);
     }
 }
 
 int feat_present(const cst_features *f, const char *name)
 {
-    return (feat_find_featpair(f,name) != NULL);
+    if (feat_find_featpair(f,name) != NULL)
+        return 1;
+    else if (f && f->linked)
+        return feat_present(f->linked,name);
+    else 
+        return 0;
 }
 
 int feat_length(const cst_features *f)
@@ -157,7 +163,15 @@ const cst_val *feat_val(const cst_features *f, const char *name)
     n = feat_find_featpair(f,name);
 
     if (n == NULL)
-	return NULL;
+    {
+        if (f && f->linked)
+        {   /* Search the linked features too if there are any */
+            /* We assume the linked features haven't been deleted, and */
+            return feat_val(f->linked,name);
+        }
+        else
+            return NULL; /* its really not there at all */
+    }
     else
 	return n->val;
 }
@@ -227,7 +241,7 @@ void feat_set(cst_features *f, const char* name, const cst_val *val)
 
     if (val == NULL)
     {
-	cst_errmsg("cst_val: trying to set a NULL val for feature \"%s\"\n",
+	cst_errmsg("cst_features: trying to set a NULL val for feature \"%s\"\n",
 		   name);
     }
     else if (n == NULL)
@@ -235,7 +249,7 @@ void feat_set(cst_features *f, const char* name, const cst_val *val)
 	cst_featvalpair *p;
 	p = (cst_featvalpair *)cst_local_alloc(f->ctx, sizeof(*p));
 	p->next = f->head;
-	p->name = name; 
+        p->name = name;
 	p->val = val_inc_refcount(val);
 	f->head = p;
     }
@@ -251,14 +265,28 @@ int feat_copy_into(const cst_features *from,cst_features *to)
     /* Copy all features in from into to */
     cst_featvalpair *p;
     int i;
-    
+
     for (i=0,p=from->head; p; p=p->next,i++)
 	feat_set(to,p->name,p->val);
     
     return i;
 }
 
-int feat_print(cst_file fd,const cst_features *f)
+int feat_link_into(const cst_features *from,cst_features *to)
+{
+    /* Thus allows more global features to be linked, without a copy */
+    /* This is used to make things thread safe(r)                    */
+    to->linked = from;
+    return 1;
+}
+
+const char *feat_own_string(cst_features *f,const char *n)
+{
+    f->owned_strings = cons_val(string_val(n),f->owned_strings);
+    return val_string(val_car(f->owned_strings));
+}
+
+int cst_feat_print(cst_file fd,const cst_features *f)
 {
     cst_featvalpair *p;
     

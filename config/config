@@ -4,14 +4,15 @@
 # Do not hand edit.
 
 TARGET_OS    = darwin14.1.0
-TARGET_CPU   = i386
+TARGET_CPU   = x86_64
 HOST_OS    = darwin14.1.0
-HOST_CPU   = i386
+HOST_CPU   = x86_64
 
 CC       = gcc
 CFLAGS   = -g -O2 -Wall -no-cpp-precomp
 CPPFLAGS = 
 SHFLAGS  = 
+LDFLAGS  = 
 
 AR       = ar
 RANLIB   = ranlib

@@ -50,7 +50,12 @@
 
 #ifndef CST_NO_SOCKETS
 
+#ifdef _MSC_VER
+#include <io.h>
+#define read(fd, buffer, count) _read(fd, buffer, count)
+#else
 #include <unistd.h>
+#endif
 
 static int play_wave_from_socket(snd_header *header,int audiostream)
 {

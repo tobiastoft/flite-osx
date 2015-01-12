@@ -199,7 +199,7 @@ static void cst_lts_get_state(cst_lts_rule *state,
 static cst_lts_phone apply_model(cst_lts_letter *vals,cst_lts_addr start, 
 				 const cst_lts_model *model)
 {
-    /* because some machines (ipaq/mips) can't deal with addrs not on     */
+    /* because some machines (arm/mips) can't deal with addrs not on     */
     /* word boundaries we use a static and copy the rule values each time */
     /* so we know its properly aligned                                    */
     /* Hmm this still might be wrong on some machines that align the      */
@@ -213,8 +213,8 @@ static cst_lts_phone apply_model(cst_lts_letter *vals,cst_lts_addr start,
 	 state.feat != CST_LTS_EOR;
 	)
     {
-/*	printf("%s %c %c %d\n",vals,vals[state.feat],state.val,
-	(vals[state.feat] == state.val) ? 1 : 0); */
+	/* printf("awb_debug %s %c %c %d\n",vals,vals[state.feat],state.val, 
+           (vals[state.feat] == state.val) ? 1 : 0);  */
 	if (vals[state.feat] == state.val)
 	    nstate = state.qtrue;
 	else

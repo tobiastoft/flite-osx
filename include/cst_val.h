@@ -64,14 +64,25 @@ typedef struct  cst_val_atom_struct {
     short ref_count;
     short type;  /* order is here important */
 #else
+#if (defined(__x86_64__) || defined(_M_X64))
+    int type;  /* order is here important */
+    int ref_count;
+#else
     short type;  /* order is here important */
     short ref_count;
 #endif
+#endif
     union 
-    { 
-	float fval;
-	int ival;
-	void *vval; 
+    {
+#if (defined(__x86_64__) || defined(_M_X64))
+        double fval;
+        long long ival;
+        void *vval;
+#else
+        float fval;
+        int ival;
+        void *vval;
+#endif
     } v;
 } cst_val_atom;
 
@@ -135,11 +146,18 @@ int val_stringp(const cst_val *a);
 const cst_val *val_assoc_string(const char *v1,const cst_val *al);
 
 void val_print(cst_file fd,const cst_val *v);
+cst_val *val_readlist_string(const char *str);
+
 cst_val *val_reverse(cst_val *v);
 cst_val *val_append(cst_val *a,cst_val *b);
 int val_length(const cst_val *l);
 cst_val *cst_utf8_explode(const cst_string *utf8string);
 cst_string *cst_implode(const cst_val *string_list);
+
+cst_val *cst_utf8_ord(const cst_val *utf8_char);
+cst_val *cst_utf8_chr(const cst_val *ord);
+
+int cst_utf8_ord_string(const char *utf8_char);
 
 /* make sure you know what you are doing before you call these */
 int val_dec_refcount(const cst_val *b);

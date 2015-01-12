@@ -168,6 +168,8 @@ int main(int argc, char **argv)
 
     cst_wave_resize(w,i,1);
 
+    cst_wave_save_riff(w,ofile);
+
     if (desired_time < 0)
 	printf("wrote %d samples %f to %s\n",
 	       i,(float)i/(float)desired_rate,ofile);

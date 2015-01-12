@@ -869,7 +869,7 @@ cst_track *mlpg(const cst_track *param_track, cst_cg_db *cg_db)
     MLPGPARA param = NODATA;
     cst_track *out;
     int dim, dim_st;
-    float like;
+    //    float like;
     int i,j;
     int nframes;
     PStreamChol pst;
@@ -916,8 +916,9 @@ cst_track *mlpg(const cst_track *param_track, cst_cg_db *cg_db)
 
     get_dltmat(param->stm, &pst.dw, 1, param->dltm);
 
-    like = get_like_pdfseq_vit(dim, dim_st, nframes, nframes, param,
-			       param_track->frames, XTRUE);
+    //like = 
+    get_like_pdfseq_vit(dim, dim_st, nframes, nframes, param,
+			param_track->frames, XTRUE);
 
     /* vlike = get_like_gv(dim2, dnum, param); */
 

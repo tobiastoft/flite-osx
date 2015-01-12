@@ -114,6 +114,33 @@ static const cst_synth_module synth_method_phones[] = {
     { NULL, NULL }
 };
 
+cst_utterance *utt_synth_wave(cst_wave *w,cst_voice *v)
+{
+    /* Create an utterance with a wave in it as if we've synthesized it */
+    /* Put it through streaming if that is require */
+    cst_utterance *u;
+    const cst_val *streaming_info_val;
+    cst_audio_streaming_info *asi = NULL;
+
+    u = new_utterance();
+    utt_init(u,v);
+    utt_set_wave(u,w);
+
+    streaming_info_val=get_param_val(u->features,"streaming_info",NULL);
+    if (streaming_info_val)
+    {
+        asi = val_audio_streaming_info(streaming_info_val);
+        asi->utt = u;
+    }
+
+    if (!asi) return u;  /* no stream */
+
+    /* Do streaming */
+    (*asi->asc)(w,0,w->num_samples,1,asi);
+
+    return u;
+}
+
 cst_utterance *apply_synth_module(cst_utterance *u,
 				  const cst_synth_module *mod)
 {
@@ -142,8 +169,12 @@ cst_utterance *apply_synth_method(cst_utterance *u,
 
 cst_utterance *utt_init(cst_utterance *u, cst_voice *vox)
 {
-    feat_copy_into(vox->features,u->features);
-    feat_copy_into(vox->ffunctions,u->ffunctions);
+    /* Link the vox features into the utterance features so the voice  */
+    /* features will be searched too (after the utt ones)              */
+    feat_link_into(vox->features,u->features);
+    feat_link_into(vox->ffunctions,u->ffunctions);
+
+    /* Do the initialization function, if there is one */
     if (vox->utt_init)
 	vox->utt_init(u, vox);
 
@@ -255,7 +286,10 @@ cst_utterance *default_phrasing(cst_utterance *u)
     cst_cart *phrasing_cart;
 
     r = utt_relation_create(u,"Phrase");
-    phrasing_cart = val_cart(feat_val(u->features,"phrasing_cart"));
+    if (feat_present(u->features,"phrasing_cart"))
+        phrasing_cart = val_cart(feat_val(u->features,"phrasing_cart"));
+    else
+        phrasing_cart = NULL;
 
     for (p=NULL,w=relation_head(utt_relation(u,"Word")); w; w=item_next(w))
     {
@@ -266,9 +300,12 @@ cst_utterance *default_phrasing(cst_utterance *u)
             item_set_string(p,"name","B");
 	}
 	item_add_daughter(p,w);
-	v = cart_interpret(w,phrasing_cart);
-	if (cst_streq(val_string(v),"BB"))
-	    p = NULL;
+        if (phrasing_cart)
+        {
+            v = cart_interpret(w,phrasing_cart);
+            if (cst_streq(val_string(v),"BB"))
+                p = NULL;
+        }
     }
 
     if (lp && item_prev(lp)) /* follow festival */
@@ -428,10 +465,12 @@ cst_utterance *default_lexical_insertion(cst_utterance *u)
     const cst_val *lex_addenda = NULL;
     const cst_val *p, *wp = NULL;
     char *phone_name;
-    char *stress = "0";
+    const char *stress = "0";
     const char *pos;
     cst_val *phones;
     cst_item *ssword, *sssyl, *segitem, *sylitem, *seg_in_syl;
+    const cst_val *vpn;
+    int dp = 0;
 
     lex = val_lexicon(feat_val(u->features,"lexicon"));
     if (lex->lex_addenda)
@@ -448,6 +487,7 @@ cst_utterance *default_lexical_insertion(cst_utterance *u)
         pos = ffeature_string(word,"pos");
 	phones = NULL;
         wp = NULL;
+        dp = 0;  /* should the phones get deleted or not */
         
         /*        printf("awb_debug word %s pos %s gpos %s\n",
                item_feat_string(word,"name"),
@@ -458,14 +498,35 @@ cst_utterance *default_lexical_insertion(cst_utterance *u)
            tokens with explicit pronunciation (or that it will
            propagate such to words, then we can remove the path here) */
 	if (item_feat_present(item_parent(item_as(word, "Token")), "phones"))
-	    phones = (cst_val *) item_feat(item_parent(item_as(word, "Token")), "phones");
+        {
+            vpn = item_feat(item_parent(item_as(word, "Token")), "phones");
+            if (cst_val_consp(vpn))
+            {   /* for SAPI ?? */
+                /* awb oct11: this seems wrong -- */
+                /* not sure SAPI still (ever) works Oct11 */
+                phones = (cst_val *) vpn;  
+            }
+            else
+            {
+                dp = 1;
+                if (cst_streq(val_string(vpn),
+                              ffeature_string(word,"p.R:Token.parent.phones")))
+                    phones = NULL; /* Already given these phones */
+                else
+                    phones = val_readlist_string(val_string(vpn));
+            }
+        }
 	else
 	{
             wp = val_assoc_string(item_feat_string(word, "name"),lex_addenda);
             if (wp)
                 phones = (cst_val *)val_cdr(val_cdr(wp));
             else
-		phones = lex_lookup(lex,item_feat_string(word,"name"),pos);
+            {
+                dp = 1;
+		phones = lex_lookup(lex,item_feat_string(word,"name"),pos,
+                                    u->features);
+            }
 	}
 
 	for (sssyl=NULL,sylitem=NULL,p=phones; p; p=val_cdr(p))
@@ -504,9 +565,11 @@ cst_utterance *default_lexical_insertion(cst_utterance *u)
 	    }
 	    cst_free(phone_name);
 	}
-	if (!item_feat_present(item_parent(item_as(word, "Token")), "phones")
-            && ! wp)
+	if (dp)
+        {
 	    delete_val(phones);
+            phones = NULL;
+        }
     }
 
     return u;
@@ -615,6 +678,13 @@ int default_utt_break(cst_tokenstream *ts,
     if (cst_strchr(ts->whitespace,'\n') != cst_strrchr(ts->whitespace,'\n'))
 	 /* contains two new lines */
 	 return TRUE;
+    /* Well, this is a little specific isn't it. */
+    else if (((cst_streq(ltoken,"Yahoo")) ||
+              (cst_streq(ltoken,"YAHOO")) ||
+              (cst_streq(ltoken,"yahoo"))) &&
+             strchr(postpunct,'!') &&
+	     strchr("abcdefghijklmnopqrstuvwxyz",token[0]))
+        return FALSE;
     else if (strchr(postpunct,':') ||
 	     strchr(postpunct,'?') ||
 	     strchr(postpunct,'!'))

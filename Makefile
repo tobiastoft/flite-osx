@@ -2,7 +2,7 @@
 ##                                                                       ##
 ##                  Language Technologies Institute                      ##
 ##                     Carnegie Mellon University                        ##
-##                      Copyright (c) 1999-2009                          ##
+##                      Copyright (c) 1999-2014                          ##
 ##                        All Rights Reserved.                           ##
 ##                                                                       ##
 ##  Permission is hereby granted, free of charge, to use and distribute  ##
@@ -36,19 +36,23 @@
 ##                                                                       ##
 ##       Authors:  Alan W Black (awb@cs.cmu.edu)                         ##
 ##                 Kevin A. Lenzo (lenzo@cs.cmu.edu)                     ##
-##          Date:  May 2009                                              ##
-##       Version:  1.3.13 current                                        ##
+##                 and others see ACKNOWLEDGEMENTS                       ##
+##          Date:  December 2014                                         ##
+##       Version:  2.0.0 release                                         ##
 ##                                                                       ## 
 ###########################################################################
 TOP=.
 DIRNAME=
 BUILD_DIRS = include src lang doc
-ALL_DIRS=config $(BUILD_DIRS) testsuite sapi palm wince windows tools main
+ALL_DIRS=config $(BUILD_DIRS) testsuite \
+         wince windows android \
+         tools main 
 CONFIG=configure configure.in config.sub config.guess \
        missing install-sh mkinstalldirs
 WINDOWS = Exports.def flite.sln fliteDll.vcproj
 FILES = Makefile README ACKNOWLEDGEMENTS COPYING $(CONFIG) $(WINDOWS)
-DIST_CLEAN = config.cache config.log config.status \
+DIST_CLEAN = .time-stamp $(TOP)/build/ \
+                config.cache config.log config.status \
 		config/config config/system.mak FileList
 
 HOST_ONLY_DIRS = tools main
@@ -62,20 +66,11 @@ ifeq ($(TARGET_OS),wince)
 BUILD_DIRS += wince
 endif
 
-ifeq ($(TARGET_OS),palmos)
-INCLUDES += -I$(TOP)/palm/include
-endif
-
 config/config: config/config.in config.status
 	./config.status
 
 configure: configure.in
 	autoconf
-
-flop:
-	./configure --target=arm-palmos
-	$(MAKE)
-	ls -al palm/flop/flop.prc
 
 backup: time-stamp
 	@ $(RM) -f $(TOP)/FileList
@@ -106,11 +101,11 @@ tags:
 
 install:
 	@echo Installing 
-	mkdir -p $(INSTALLBINDIR)
-	mkdir -p $(INSTALLLIBDIR)
-	mkdir -p $(INSTALLINCDIR)
-	$(INSTALL) -m 644 include/*.h $(INSTALLINCDIR)
-	@ $(MAKE) -C main --no-print-directory install
+	mkdir -p $(DESTDIR)$(INSTALLBINDIR)
+	mkdir -p $(DESTDIR)$(INSTALLLIBDIR)
+	mkdir -p $(DESTDIR)$(INSTALLINCDIR)
+	$(INSTALL) -m 644 include/*.h $(DESTDIR)$(INSTALLINCDIR)
+	@ $(MAKE) -C main --no-print-directory DESTDIR=$(DESTDIR) install
 
 time-stamp :
 	@ echo $(PROJECT_NAME) >.time-stamp
@@ -121,6 +116,13 @@ time-stamp :
 	@ echo $(LOGNAME) >>.time-stamp
 	@ hostname >>.time-stamp
 	@ date >>.time-stamp
+
+# Convinience command, to generate cg dumped voices
+voices: ./bin/flite_cmu_us_awb ./bin/flite_cmu_us_rms ./bin/flite_cmu_us_rms
+	mkdir -p voices
+	./bin/flite_cmu_us_awb -voicedump voices/cmu_us_awb.flitevox
+	./bin/flite_cmu_us_rms -voicedump voices/cmu_us_rms.flitevox
+	./bin/flite_cmu_us_slt -voicedump voices/cmu_us_slt.flitevox
 
 test:
 	@ $(MAKE) --no-print-directory -C testsuite test

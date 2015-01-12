@@ -92,7 +92,7 @@ VoxDef VoxDefs[] = {
 cst_utterance *flowm_print_relation_callback(cst_utterance *u);
 cst_utterance *flowm_utt_callback(cst_utterance *u);
 int flowm_audio_stream_chunk(const cst_wave *w, int start, int size, 
-                             int last, void *user);
+                             int last, cst_audio_streaming_info *asi);
 
 float flowm_find_file_percentage()
 {
@@ -340,7 +340,7 @@ cst_utterance *flowm_utt_callback(cst_utterance *u)
 }
 
 int flowm_audio_stream_chunk(const cst_wave *w, int start, int size, 
-                             int last, void *user)
+                             int last, cst_audio_streaming_info *asi)
 {
 
     if (fl_ad == NULL)

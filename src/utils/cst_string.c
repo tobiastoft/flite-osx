@@ -42,6 +42,7 @@
 #include <ctype.h>
 #include "cst_alloc.h"
 #include "cst_string.h"
+#include "cst_file.h"
 
 #ifdef UNDER_CE /* WinCE does not fully implement ANSI C */
 
@@ -157,4 +158,22 @@ int cst_member_string(const char *str, const char * const *slist)
 	    break;
 
     return *p != NULL;
+}
+
+char *cst_strcat(const char *a, const char *b)
+{
+    char *r;
+
+    r = cst_alloc(char,cst_strlen(a)+cst_strlen(b)+1);
+    cst_sprintf(r,"%s%s",a,b);
+    return r;
+}
+
+char *cst_strcat3(const char *a, const char *b, const char *c)
+{
+    char *r;
+
+    r = cst_alloc(char,cst_strlen(a)+cst_strlen(b)+cst_strlen(c)+1);
+    cst_sprintf(r,"%s%s%s",a,b,c);
+    return r;
 }

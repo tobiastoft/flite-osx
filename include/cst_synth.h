@@ -43,6 +43,7 @@
 #include "cst_hrg.h"
 #include "cst_tokenstream.h"
 #include "cst_voice.h"
+#include "cst_wave.h"
 
 typedef int (*cst_breakfunc)(cst_tokenstream *ts, 
 		             const char *token, 
@@ -56,6 +57,7 @@ cst_utterance *utt_init(cst_utterance *u, cst_voice *vox);
 cst_utterance *utt_synth(cst_utterance *u);
 cst_utterance *utt_synth_phones(cst_utterance *u);
 cst_utterance *utt_synth_tokens(cst_utterance *u);
+cst_utterance *utt_synth_wave(cst_wave *w,cst_voice *v);
 
 typedef struct cst_dur_stats_struct {
     char *phone;

@@ -280,8 +280,8 @@ cst_val *en_exp_id(const char *numstring)
 	return cons_val(string_val("oh"),
 			en_exp_digits(&numstring[1]));
     else if (((cst_strlen(numstring) == 4) && 
-	 ((numstring[1] == '0'))) ||
-	(cst_strlen(numstring) < 3))
+              (numstring[1] == '0') && (numstring[2] == '0')) ||
+             (cst_strlen(numstring) < 3))
 	return en_exp_number(numstring);
     else if (cst_strlen(numstring)%2 == 1)
     {

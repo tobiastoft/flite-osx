@@ -99,20 +99,25 @@ int audio_flush_file(cst_audiodev *ad);
 /* For audio streaming */
 #define CST_AUDIO_STREAM_STOP -1
 #define CST_AUDIO_STREAM_CONT 0
-typedef int (*cst_audio_stream_callback)(const cst_wave *w,int start,int size, 
-                                      int last, void *user);
 typedef struct cst_audio_streaming_info_struct
 {
     int min_buffsize;
-    cst_audio_stream_callback asc;
+    int (*asc)(const cst_wave *w,int start,int size, 
+               int last, struct cst_audio_streaming_info_struct *asi);
+
+    const cst_utterance *utt; /* in case you need more information */
+    const cst_item *item;     /* because you'll probably want this */
+                              /* But this is *not* updated automatically */
     void *userdata;
 } cst_audio_streaming_info;
 cst_audio_streaming_info *new_audio_streaming_info();
 void delete_audio_streaming_info(cst_audio_streaming_info *asi);
 CST_VAL_USER_TYPE_DCLS(audio_streaming_info,cst_audio_streaming_info)
+typedef int (*cst_audio_stream_callback)(const cst_wave *w,int start,int size, 
+                                      int last, cst_audio_streaming_info *asi);
 
 /* An example audio streaming callback function src/audio/au_streaming.c */
 int audio_stream_chunk(const cst_wave *w, int start, int size, 
-                       int last, void *user);
+                       int last, cst_audio_streaming_info *asi);
 
 #endif

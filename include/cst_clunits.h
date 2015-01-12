@@ -91,6 +91,8 @@ int clunit_get_unit_index(cst_clunit_db *cludb,
 			  int instance);
 int clunit_get_unit_index_name(cst_clunit_db *cludb,
 			       const char *name);
+/* Used to test if the unit name is in the database, -1 if not */
+int clunit_get_unit_type_index(cst_clunit_db *cludb, const char *name);
 
 #define UNIT_TYPE(db,u) ((db)->types[(db)->units[(u)].type].name)
 #define UNIT_INDEX(db,u) ((u) - (db)->types[(db)->units[(u)].type].start)

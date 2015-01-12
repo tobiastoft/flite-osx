@@ -53,12 +53,13 @@ struct cst_phoneset_struct {
     const char *silence;
     const int num_phones;
     const int * const * fvtable;
+    int freeable;  /* 0 if const in memory, 1 if we alloc'd it */
 };
 typedef struct cst_phoneset_struct cst_phoneset;
 
 /* Constructor functions */
 cst_phoneset *new_phoneset();
-void delete_phoneset(cst_phoneset *u);
+void delete_phoneset(const cst_phoneset *u);
 
 const cst_val *phone_feature(const cst_phoneset *ps,
 			     const char* phonename,

@@ -47,10 +47,6 @@
 #include "cst_sigpr.h"
 
 static int nearest_pm(cst_sts_list *sts_list,int start,int end,float u_index);
-void add_residual_windowed(int targ_size, 
-			   unsigned char *targ_residual,
-			   int unit_size, 
-			   const unsigned char *unit_residual);
 
 cst_utterance *join_units(cst_utterance *utt)
 {
@@ -89,7 +85,10 @@ cst_utterance *join_units_simple(cst_utterance *utt)
 
     streaming_info_val=get_param_val(utt->features,"streaming_info",NULL);
     if (streaming_info_val)
+    {
         lpcres->asi = val_audio_streaming_info(streaming_info_val);
+        lpcres->asi->utt = utt;
+    }
 
     if (cst_streq(resynth_type, "fixed"))
 	w = lpc_resynth_fixedpoint(lpcres); 
@@ -120,7 +119,10 @@ cst_utterance *join_units_modified_lpc(cst_utterance *utt)
 
     streaming_info_val=get_param_val(utt->features,"streaming_info",NULL);
     if (streaming_info_val)
+    {
         lpcres->asi = val_audio_streaming_info(streaming_info_val);
+        lpcres->asi->utt = utt;
+    }
 
     if (cst_streq(resynth_type, "float"))
 	w = lpc_resynth(lpcres); 
@@ -134,6 +136,13 @@ cst_utterance *join_units_modified_lpc(cst_utterance *utt)
 	cst_error(); /* Should not happen */
     }
 
+    if (w == NULL)
+    {
+        /* Synthesis Failed, probably because it was interrupted */
+        utt_set_feat_int(utt,"Interrupted",1);
+        w = new_wave();
+    }
+
     utt_set_wave(utt,w);
     
     return utt;
@@ -144,7 +153,7 @@ cst_utterance *asis_to_pm(cst_utterance *utt)
     /* Copy the PM structure from the units unchanged */
     cst_item *u;
     cst_lpcres *target_lpcres;
-    int unit_entry, unit_start, unit_end;
+    int  unit_start, unit_end;
     int utt_pms, utt_size, i;
     cst_sts_list *sts_list;
 
@@ -157,7 +166,6 @@ cst_utterance *asis_to_pm(cst_utterance *utt)
 	 u; 
 	 u=item_next(u))
     {
-	unit_entry = item_feat_int(u,"unit_entry");
 	unit_start = item_feat_int(u,"unit_start");
 	unit_end = item_feat_int(u,"unit_end");
 	utt_size += get_unit_size(sts_list,unit_start,unit_end);
@@ -172,7 +180,6 @@ cst_utterance *asis_to_pm(cst_utterance *utt)
 	 u; 
 	 u=item_next(u))
     {
-	unit_entry = item_feat_int(u,"unit_entry");
 	unit_start = item_feat_int(u,"unit_start");
 	unit_end = item_feat_int(u,"unit_end");
 	for (i=unit_start; i<unit_end; i++,utt_pms++)
@@ -243,18 +250,20 @@ cst_utterance *concat_units(cst_utterance *utt)
 {
     cst_lpcres *target_lpcres;
     cst_item *u;
-    int pm_i, unit_entry, unit_size, unit_start, unit_end;
-    int rpos, pm_start, nearest_u_pm;
-    int sample_rate;
+    int pm_i;
+    int  unit_size, unit_start, unit_end;
+    int rpos, nearest_u_pm;
     int target_end, target_start;
     float m, u_index;
     cst_sts_list *sts_list;
     const char *residual_type;
 
-    residual_type = get_param_string(utt->features,"residual_type", "plain");
     sts_list = val_sts_list(utt_feat_val(utt,"sts_list"));
+    if (sts_list->codec == NULL)
+        residual_type = "ulaw";
+    else
+        residual_type = sts_list->codec;
     target_lpcres = val_lpcres(utt_feat_val(utt,"target_lpcres"));
-    sample_rate = sts_list->sample_rate;
     
     target_lpcres->lpc_min = sts_list->coeff_min;
     target_lpcres->lpc_range = sts_list->coeff_range;
@@ -262,13 +271,16 @@ cst_utterance *concat_units(cst_utterance *utt)
     target_lpcres->sample_rate = sts_list->sample_rate;
     lpcres_resize_samples(target_lpcres,
 			  target_lpcres->times[target_lpcres->num_frames-1]);
-    
-    sample_rate = sts_list->sample_rate;
+    if (utt_feat_val(utt,"delayed_decoding"))
+    {
+        target_lpcres->delayed_decoding = 1;
+        target_lpcres->packed_residuals = 
+            cst_alloc(const unsigned char *,target_lpcres->num_frames);
+    }
 
     target_start = 0.0; rpos = 0; pm_i = 0; u_index = 0;
     for (u=relation_head(utt_relation(utt,"Unit")); u; u=item_next(u))
     {
-	unit_entry = item_feat_int(u,"unit_entry");
 	unit_start = item_feat_int(u,"unit_start");
 	unit_end = item_feat_int(u,"unit_end");
 	unit_size = get_unit_size(sts_list,unit_start,unit_end);
@@ -278,7 +290,7 @@ cst_utterance *concat_units(cst_utterance *utt)
 	m = (float)unit_size/(float)(target_end-target_start);
 /*	printf("unit_size %d start %d end %d tstart %d tend %d m %f\n",  
 	unit_size, unit_start, unit_end, target_start, target_end, m); */
-	for (pm_start=pm_i ; 
+	for ( /* pm_start=pm_i */ ; 
 	     (pm_i < target_lpcres->num_frames) &&
 		 (target_lpcres->times[pm_i] <= target_end);
 	     pm_i++)
@@ -295,6 +307,31 @@ cst_utterance *concat_units(cst_utterance *utt)
 				   &target_lpcres->residual[rpos],
 				   get_frame_size(sts_list, nearest_u_pm),
 				   get_sts_residual(sts_list, nearest_u_pm));
+	    else if (cst_streq(residual_type,"g721"))
+		add_residual_g721(target_lpcres->sizes[pm_i],
+				   &target_lpcres->residual[rpos],
+				   get_frame_size(sts_list, nearest_u_pm),
+				   get_sts_residual(sts_list, nearest_u_pm));
+	    else if (cst_streq(residual_type,"g721vuv"))
+            {
+                if (target_lpcres->delayed_decoding)
+                {
+                    target_lpcres->packed_residuals[pm_i] =
+                        get_sts_residual(sts_list, nearest_u_pm);
+                }
+                else
+                {
+                    add_residual_g721vuv(target_lpcres->sizes[pm_i],
+				   &target_lpcres->residual[rpos],
+				   get_frame_size(sts_list, nearest_u_pm),
+				   get_sts_residual(sts_list, nearest_u_pm));
+                }
+            }
+	    else if (cst_streq(residual_type,"vuv"))
+		add_residual_vuv(target_lpcres->sizes[pm_i],
+                                 &target_lpcres->residual[rpos],
+                                 get_frame_size(sts_list, nearest_u_pm),
+                                 get_sts_residual(sts_list, nearest_u_pm));
 	    /* But this requires particular layout of residuals which
 	       probably isn't true */
 	    /*
@@ -304,7 +341,7 @@ cst_utterance *concat_units(cst_utterance *utt)
 				     get_frame_size(sts_list, nearest_u_pm),
 				     get_sts_residual(sts_list, nearest_u_pm));
 	    */
-	    else
+	    else /* default is "ulaw" */
 		add_residual(target_lpcres->sizes[pm_i],
 			     &target_lpcres->residual[rpos],
 			     get_frame_size(sts_list, nearest_u_pm),
@@ -397,6 +434,7 @@ void add_residual(int targ_size, unsigned char *targ_residual,
 	memmove(&targ_residual[0],
 		&unit_residual[((unit_size-targ_size)/2)],
 		targ_size*sizeof(unsigned char));
+    }
 #if 0
     if (unit_size < targ_size)
 	memmove(&targ_residual[0],
@@ -407,13 +445,32 @@ void add_residual(int targ_size, unsigned char *targ_residual,
 	memmove(&targ_residual[0],
 		&unit_residual[0],
 		targ_size*sizeof(unsigned char));
-#endif
-	/* I can't hear any improvement with power fixes so I don't do them */
-/*	pow_factor = (float)targ_size/(float)unit_size;
-	for (i=0; i<targ_size; i++)
-	    targ_residual[i] = 
-	    cst_short_to_ulaw((short)(cst_ulaw_to_short(targ_residual[i])*pow_factor)); */
     }
+#endif
+}
+
+void add_residual_g721(int targ_size, unsigned char *targ_residual,
+                       int uunit_size, const unsigned char *unit_residual)
+{
+    /* Residual is encoded with g721 */
+    unsigned char *unit_residual_unpacked;
+    int unit_size;
+
+    unit_residual_unpacked = 
+        cst_g721_decode(&unit_size, (uunit_size+CST_G721_LEADIN+1)/2, unit_residual);
+
+    if (uunit_size < targ_size)
+	memmove(&targ_residual[((targ_size-uunit_size)/2)],
+		&unit_residual_unpacked[CST_G721_LEADIN],
+		uunit_size*sizeof(unsigned char));
+    else
+    {
+	memmove(&targ_residual[0],
+		&unit_residual_unpacked[CST_G721_LEADIN+((uunit_size-targ_size)/2)],
+		targ_size*sizeof(unsigned char));
+    }
+
+    cst_free(unit_residual_unpacked);
 }
 
 static double plus_or_minus_one()
@@ -426,15 +483,114 @@ static double plus_or_minus_one()
         return -1.0;
 }
 
+static double rand_zero_to_one()
+{
+    /* Return number between 0.0 and 1.0 */
+    return rand()/(float)RAND_MAX;
+}
+
+void add_residual_g721vuv(int targ_size, unsigned char *targ_residual,
+                       int uunit_size, const unsigned char *unit_residual)
+{
+    /* Residual is encoded with g721 */
+    unsigned char *unit_residual_unpacked;
+    int p, j;
+    float m, q;
+    int unit_size;
+    int offset;
+
+    if (unit_residual[0] == 0)
+    {
+        unit_size = uunit_size;
+        unit_residual_unpacked = cst_alloc(unsigned char,unit_size);
+        p = unit_residual[4]; p = p << 8;
+        p += unit_residual[3]; p = p << 8;
+        p += unit_residual[2]; p = p << 8;
+        p += unit_residual[1]; 
+        m = ((float)p);
+        for (j=0; j<unit_size; j++)
+        {
+            q = m*2*rand_zero_to_one()*plus_or_minus_one();
+            unit_residual_unpacked[j] = cst_short_to_ulaw((short)q);
+        }
+        offset = 0;
+    }
+    else
+    {
+        unit_residual_unpacked = 
+            cst_g721_decode(&unit_size, (uunit_size+CST_G721_LEADIN+1)/2, unit_residual);
+        offset = CST_G721_LEADIN;
+    }
+     
+    if (uunit_size < targ_size)
+	memmove(&targ_residual[((targ_size-uunit_size)/2)],
+		&unit_residual_unpacked[offset],
+		uunit_size*sizeof(unsigned char));
+    else
+    {
+	memmove(&targ_residual[0],
+		&unit_residual_unpacked[offset+((uunit_size-targ_size)/2)],
+		targ_size*sizeof(unsigned char));
+    }
+
+    cst_free(unit_residual_unpacked);
+}
+
+void add_residual_vuv(int targ_size, unsigned char *targ_residual,
+                      int uunit_size, const unsigned char *unit_residual)
+{
+    /* Residual is encoded with vuv */
+    unsigned char *unit_residual_unpacked;
+    int p, j;
+    float m, q;
+    int unit_size;
+
+    if (unit_residual[0] == 0)
+    {
+        unit_size = uunit_size;
+        unit_residual_unpacked = cst_alloc(unsigned char,unit_size);
+        p = unit_residual[4]; p = p << 8;
+        p += unit_residual[3]; p = p << 8;
+        p += unit_residual[2]; p = p << 8;
+        p += unit_residual[1]; 
+        m = ((float)p);
+        for (j=0; j<unit_size; j++)
+        {
+            q = m*2*rand_zero_to_one()*plus_or_minus_one();
+            unit_residual_unpacked[j] = cst_short_to_ulaw((short)q);
+        }
+    }
+    else
+    {
+        /* Put in to the unpacked -- with no unpacking */
+        /* The cast is because unit_residual is const, and can't be deleted */
+        unit_residual_unpacked = (unsigned char *)(void *)unit_residual;
+    }
+     
+    if (uunit_size < targ_size)
+	memmove(&targ_residual[((targ_size-uunit_size)/2)],
+		&unit_residual_unpacked[0],
+		uunit_size*sizeof(unsigned char));
+    else
+    {
+	memmove(&targ_residual[0],
+		&unit_residual_unpacked[((uunit_size-targ_size)/2)],
+		targ_size*sizeof(unsigned char));
+    }
+
+    if (unit_residual[0] == 0)
+        cst_free(unit_residual_unpacked);
+}
+
 void add_residual_pulse(int targ_size, unsigned char *targ_residual,
 			int unit_size, const unsigned char *unit_residual)
 {
     int p,i,m;
-    /* Unit residual isn't a pointed its a number, the power for the 
+    /* Unit residual isn't a pointer its a number, the power for the 
        the sts, yes this is hackily casting the address to a number */
 
     /* Need voiced and unvoiced model */
-    p = (int)unit_residual;
+    p = (int)unit_residual; /* I know the compiler will complain about this */
 
     if (p > 7000)  /* voiced */
     {

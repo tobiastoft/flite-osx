@@ -53,6 +53,10 @@ typedef struct cst_featvalpair_struct {
 typedef struct cst_features_struct {
     struct cst_featvalpair_struct *head;
     cst_alloc_context ctx;
+    cst_val *owned_strings; /* fnames that are owned by this struct */
+
+    /* Link to other cst_features that we search too */
+    const struct cst_features_struct *linked; 
 } cst_features;
 
 /* Constructor functions */
@@ -81,9 +85,18 @@ int feat_remove(cst_features *f,const char *name);
 int feat_present(const cst_features *f,const char *name);
 int feat_length(const cst_features *f);
 
+/* Feature names are expected to be literals -- its *much* faster to do */
+/* look ups and less alloc/frees are necesssary.  Almosts always this is */
+/* fine, but when you are making up new fnames, you can get a copy of the */
+/* string that will be deleted when the cst_features is deleted */
+const char *feat_own_string(cst_features *f,const char *name);
+
 CST_VAL_USER_TYPE_DCLS(features,cst_features)
 
 int feat_copy_into(const cst_features *from,cst_features *to);
-int feat_print(cst_file fd,const cst_features *f);
+/* Link FROM into TO so FROM's features will be searched after TO's features */
+int feat_link_into(const cst_features *from,cst_features *to);
+/* For debugging */
+int cst_feat_print(cst_file fd,const cst_features *f);
 
 #endif

@@ -3,7 +3,7 @@
 ##                                                                       ##
 ##                  Language Technologies Institute                      ##
 ##                     Carnegie Mellon University                        ##
-##                        Copyright (c) 2004                             ##
+##                       Copyright (c) 2004-2012                         ##
 ##                        All Rights Reserved.                           ##
 ##                                                                       ##
 ##  Permission is hereby granted, free of charge, to use and distribute  ##
@@ -32,23 +32,26 @@
 ##                                                                       ##
 ###########################################################################
 ##                                                                       ##
-##  Make the files from the Festival Released version                    ##
+##  Make a flite lexicon from a Festival compiled lexicon                ##
 ##                                                                       ##
-##  This doesn't work yet                                                ##
+##  This is offered as an example, though it's not robust                ##
 ##                                                                       ##
 ###########################################################################
 
-if [ "x$FLITEDIR" == "x" ]
+if [ "x$FLITEDIR" = "x" ]
 then
    FLITEDIR=`pwd`/../..
 fi
 
-LEXNAME=cmu_dari
+## Change these two lines
+LEXNAME=cmu_iq
+LEXFILE=cmu_iq_lex.out
 
 if [ $# = 0 ]
 then
    $0 setup
    $0 lts
+   $0 lts2c
    $0 lex
    $0 compresslex
    $0 install
@@ -57,39 +60,40 @@ fi
 
 if [ "$1" = "setup" ]
 then
-   tar zxvf festlex_CMU.tar.gz
-   cp -p $FESTVOXDIR/src/lts/build_lts festival/lib/dicts/cmu
-   cp -p $FESTVOXDIR/src/lts/build_lts_rules festival/lib/dicts/cmu
-   mkdir festival/lib/dicts/cmu/c
-   mkdir festival/lib/dicts/cmu/wfst
-   mkdir festival/lib/dicts/cmu/lts_scratch
+   $FESTVOXDIR/src/lts/build_lts setup $LEXFILE utf8
+   mkdir c
+   mkdir wfst
+   cp -p $FESTVOXDIR/src/lts/build_lts .
+   cp -p $FESTVOXDIR/src/lts/build_lts_rules .
 fi
 
 if [ "$1" = "lts" ]
 then
-  (cd festival/lib/dicts/cmu;
-   festival --heap 10000000 -b allowables.scm '(dump-flat-entries-all "cmudict-0.4.out" "lts_scratch/lex_entries.out")'
+   # Let's assume you have your allowables.scm already
+   ./build_lts make_allowables_smt
    ./build_lts cummulate
    ./build_lts align
    ./build_lts build
    ./build_lts merge
    ./build_lts test
+fi
+
+if [ "$1" = "lts2c" ]
+then
    festival --heap 10000000 -b $FLITEDIR/tools/make_lts_wfst.scm lts_scratch/lex_lts_rules.scm '(lts_to_rg_to_wfst lex_lts_rules "wfst/")';
-   festival --heap 10000000 -b $FLITEDIR/tools/make_lts.scm lts_scratch/lex_lts_rules.scm '(ltsregextoC "cmu" lex_lts_rules "wfst/" "c")';
-   )
+   festival --heap 10000000 -b $FLITEDIR/tools/make_lts.scm lts_scratch/lex_lts_rules.scm '(ltsregextoC "'$LEXNAME'" lex_lts_rules "wfst/" "c")';
 fi
 
 if [ "$1" = "lex" ]
 then
-   ( cd festival/lib/dicts/cmu;
      # Find the words to prune from the built lexicon
      # We will prune words that aren't homographs and the LTS gets correct
      # Use the lts_test.log to find the failed entries and only
      # include them in the list 
-     festival -b cmulex.scm ~/projects/flite/tools/make_lex.scm '(remove_predictable_entries "cmudict-0.4.out" "pruned_lex.scm" "lex_lts_rules.scm")'
-     festival --heap 10000000 -b '(lex.compile "pruned_lex.scm" "pruned_lex.out")'
-     festival --heap 10000000 -b $FLITEDIR/tools/make_lex.scm '(lextoC "cmu" "pruned_lex.out" "c")' ;
-   )
+#     festival -b cmulex.scm ~/projects/flite/tools/make_lex.scm '(remove_predictable_entries "cmudict-0.4.out" "pruned_lex.scm" "lex_lts_rules.scm")'
+#     festival --heap 10000000 -b '(lex.compile "pruned_lex.scm" "pruned_lex.out")'
+     festival --heap 10000000 -b $FLITEDIR/tools/make_lex.scm '(lextoC "'$LEXNAME'" "lts_scratch/lex_entries.out" "c")' ;
+
 fi
 
 if [ "$1" = "lex2" ]
@@ -166,17 +170,15 @@ fi
 
 if [ "$1" = "install" ]
 then
-   cp -p festival/lib/dicts/cmu/c/cmu_lex_data.c .
-   cp -p festival/lib/dicts/cmu/c/cmu_lex_data_compressed.c cmu_lex_data_raw.c
-   cp -p festival/lib/dicts/cmu/c/cmu_lex_phones_huff_table.c .
-   cp -p festival/lib/dicts/cmu/c/cmu_lex_entries_huff_table.c .
-   cp -p festival/lib/dicts/cmu/c/cmu_lex_entries.c .
-   cp -p festival/lib/dicts/cmu/c/cmu_lex_num_bytes_compressed.c cmu_lex_num_bytes.c
-
-   cp -p festival/lib/dicts/cmu/c/cmu_lts_model.c .
-   cp -p festival/lib/dicts/cmu/c/cmu_lts_model.h .
-   cp -p festival/lib/dicts/cmu/c/cmu_lts_rules.c .
-
+   cp -p c/${LEXNAME}_lex_data.c .
+   cp -p c/${LEXNAME}_lex_data_compressed.c ./${LEXNAME}_lex_data_raw.c
+   cp -p c/${LEXNAME}_lex_num_bytes_compressed.c ./${LEXNAME}_lex_num_bytes.c
+   cp -p c/${LEXNAME}_lex_entries.c .
+   cp -p c/${LEXNAME}_lex_phones_huff_table.c .
+   cp -p c/${LEXNAME}_lex_entries_huff_table.c .
+   cp -p c/${LEXNAME}_lts_model.c .
+   cp -p c/${LEXNAME}_lts_model.h .
+   cp -p c/${LEXNAME}_lts_rules.c .
 fi
 
 

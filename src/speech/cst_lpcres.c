@@ -57,6 +57,8 @@ void delete_lpcres(cst_lpcres *l)
 	cst_free((unsigned short **)l->frames);
 	cst_free(l->residual);
 	cst_free(l->sizes);
+        if (l->delayed_decoding)
+            cst_free(l->packed_residuals);
 	cst_free(l);
     }
     return;

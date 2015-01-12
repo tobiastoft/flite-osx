@@ -4,6 +4,6 @@
 # Do not hand edit.
 
 OSTYPE		:= darwin14.1.0
-MACHINETYPE	:= i386
-PLATFORM	:= i386-apple-darwin14.1.0
+MACHINETYPE	:= x86_64
+PLATFORM	:= x86_64-apple-darwin14.1.0
 FULLOSTYPE	:= apple-darwin14.1.0

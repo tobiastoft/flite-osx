@@ -7,7 +7,7 @@ Carnegie Mellon University.
 
 Kevin A. Lenzo was involved in the design, conversion techniques and
 representions for the voice distributed with flite (as well as being
-the actual voice itself).
+the actual kal voice itself).
 
 Other contributions are:
 
@@ -31,15 +31,17 @@ Tomoki Toda
    The mlsa and mlpg support came view Tomoki's support for voice convertion
    in FestVox which in turn (some of which) comes from NITECH's HTS.
 Marcela Charfuelan (DFKI)
-   For the mixed-excitation techniques.  These origianlly came from NITECH
+   For the mixed-excitation techniques.  These originally came from NITECH
    but we understood the technqiues from Marcela's Open Mary Java code and
    implemented them in our optimized version of MLSA.
 David Huggins-Daines (dhd@cepstral.com) 
    much of the clunits code, porting to multiple platforms, substantial
    code tidy up and configure/autoconf guidance.
 Cepstral, LLC (http://cepstral.com)
-   For supporting DHD to spend time on flite and passing back the important
-   early fixes and enhancements including SAPI support (funded by FCT)
+   For supporting DHD to spend time (in 2001) on flite and passing
+   back the important early fixes and enhancements including SAPI
+   support (funded by Portuguese FCT to produce an open source
+   synthesis solution).
 Willie Walker <william.walker@sun.com> and the rest of the Sun Speech Group
    lots of low level bugs (and fixes).
 Portuguese Foundation for Science and Technology (FCT) Praxis XXI program
@@ -57,10 +59,15 @@ Greg Parker gparker@sealiesoftware.com
    version doing something reasonable under PalmOS
 Lukas Loehrer <loehrerl@gmx.net> Feb 2006
    alsa support (default if available)
+Udhyakumar N
+   For making the mixed excitation code work, and show its value
 Brian Langner
    redid the Visual Studio support
-
-
-
-
-
+Alok Parlikar
+   Android support, and cg voice dumping (and loading), indic support
+Gopala Anumanchipalli
+   spamf0 support, unitran integration
+Richard Sproat and Kyoung-young Kim (UIUC)
+   Unitran: unicode to sampa grapheme mapping tables
+Sun Microsystems
+   g72x code

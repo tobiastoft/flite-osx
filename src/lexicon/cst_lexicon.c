@@ -159,9 +159,13 @@ cst_val *cst_lex_make_entry(const cst_lexicon *lex, const cst_string *entry)
         p = ts_get(e);
         /* Check its a legal phone */
         for (i=0; lex->phone_table[i]; i++)
+       {
             if (cst_streq(p,lex->phone_table[i]))
                 break;
+        }
         if (cst_streq("#",p)) /* comment to end of line */
+            break;
+        else if (cst_streq("",p)) /* trailing ws at eoln causes this */
             break;
         else if (lex->phone_table[i])
             /* Only add it if its a valid phone */
@@ -223,7 +227,8 @@ static int no_syl_boundaries(const cst_item *i, const cst_val *p)
     return FALSE;
 }
 
-int in_lex(const cst_lexicon *l, const char *word, const char *pos)
+int in_lex(const cst_lexicon *l, const char *word, const char *pos,
+           const cst_features *feats)
 {
     /* return TRUE is its in the lexicon */
     int r = FALSE, i;
@@ -249,7 +254,8 @@ int in_lex(const cst_lexicon *l, const char *word, const char *pos)
     return r;
 }
 
-cst_val *lex_lookup(const cst_lexicon *l, const char *word, const char *pos)
+cst_val *lex_lookup(const cst_lexicon *l, const char *word, const char *pos,
+                    const cst_features *feats)
 {
     int index;
     int p;
@@ -287,7 +293,7 @@ cst_val *lex_lookup(const cst_lexicon *l, const char *word, const char *pos)
 	}
 	else if (l->lts_function)
 	{
-	    phones = (l->lts_function)(l,word,"");
+	    phones = (l->lts_function)(l,word,"",feats);
 	}
 	else if (l->lts_rule_set)
 	{
@@ -313,7 +319,9 @@ static cst_val *lex_lookup_addenda(const char *wp,const cst_lexicon *l,
 
     for (i=0; l->addenda[i]; i++)
     {
-	if (((wp[0] == '0') || (wp[0] == l->addenda[i][0][0])) &&
+	if (((wp[0] == '0') || 
+             (wp[0] == l->addenda[i][0][0]) || 
+             (l->addenda[i][0][0] == '0')) &&
 	    (cst_streq(wp+1,l->addenda[i][0]+1)))
 	{
 	    for (j=1; l->addenda[i][j]; j++)
@@ -377,9 +385,13 @@ static int lex_data_closest_entry(const cst_lexicon *l,int p,int start,int end)
 	   (p+d < end))
     {
 	if (l->data[(p+d)-1] == 255)
+        {
 	    return p+d;
+        }
 	else if (l->data[(p-d)-1] == 255)
+        {
 	    return p-d;
+        }
 	d++;
     }
     return p-d;
@@ -403,11 +415,15 @@ static int lex_lookup_bsearch(const cst_lexicon *l, const char *word)
 	c = lex_match_entry(word_pos,word);
 
 	if (c == 0)
+        {
 	    return find_full_match(l,mid,word);
+        }
 	else if (c > 0)
 	    end = mid;
 	else
+        {
 	    start = lex_data_next_entry(l,mid + 1,end);
+        }
 
 #if 0
 	if (l->data[start-1] == 255)

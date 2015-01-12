@@ -168,10 +168,10 @@ Feature and value are single bytes, which addrs are double bytes."
 	(set! lts_pos (- lts_pos 1))
 	t) ;; do nothing
        ((string-matches (car (car (cdr state))) ".*_.*")
-	(format ofde "   %s, '%s', %s , %s , \n"
+	(format ofde "   %s, %d, %s , %s , \n"
 		(lts_feat (car (car (cdr state))))
-		(lts_val (car (car (cdr state))))
-;		(lts_phone (lts_letter (car (car (cdr state)))) 0 letter_table)
+;		(lts_val (car (car (cdr state))))
+		(lts_let_num (lts_letter (car (car (cdr state)))) 0 letter_table)
 		(format nil "LTS_STATE_%d_%d" ln
 			(car (cdr (cdr (car (cdr (cdr state)))))))
 		(format nil "LTS_STATE_%d_%d" ln 
@@ -218,6 +218,16 @@ The letter being tested."
     (+ 1 n))
    (t
     (lts_phone p (+ 1 n) (cdr table)))))
+
+(define (lts_let_num p n table)
+  (cond
+   ((null table)
+    (format t "no entry %s %d\n" p n)
+    (errrr))
+   ((string-equal p (car table))
+    n)
+   (t
+    (lts_let_num p (+ 1 n) (cdr table)))))
   
 (define (lts_bytify n)
   "(lts_bytify n)

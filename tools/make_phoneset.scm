@@ -120,7 +120,8 @@ Convert a Phoneset definition to a C structure in ODIR/NAME_phoneset.c."
     (format ofdc "  %s_phonenames,\n" name)
     (format ofdc "  \"%s\",\n" silence)
     (format ofdc "  %d,\n" num_phones)
-    (format ofdc "  %s_fvtable\n" name)
+    (format ofdc "  %s_fvtable,\n" name)
+    (format ofdc "  0  /* not freeable */\n")
     (format ofdc "};\n")
 
     (fclose ofdc)

@@ -44,8 +44,6 @@
 #include "usenglish.h"
 #include "cmu_lex.h"
 
-static cst_utterance *__VOICENAME___postlex(cst_utterance *u);
-
 extern cst_diphone_db __VOICENAME___db;
 
 cst_voice *__VOICENAME___diphone = NULL;
@@ -97,10 +95,3 @@ void unregister___VOICENAME__(cst_voice *vox)
     __VOICENAME___diphone = NULL;
 }
 
-
-static cst_utterance *__VOICENAME___postlex(cst_utterance *u)
-{
-    /* Post lexical rules */
-    cmu_lex.postlex(u);
-    return u;
-}

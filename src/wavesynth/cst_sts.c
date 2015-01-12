@@ -78,9 +78,15 @@ int get_unit_size(const cst_sts_list *s,int start, int end)
 int get_frame_size(const cst_sts_list *sts_list, int frame)
 {
     if (sts_list->sts) 
-	return sts_list->sts[frame].size;
+    {
+        return sts_list->sts[frame].size;
+    }
     else if (sts_list->sts_paged)
-	return sts_list->sts_paged[frame].res_size;
+    {
+        return sts_list->sts_paged[frame].res_size;
+    }
+    else if (sts_list->ressizes)
+        return sts_list->ressizes[frame];
     else 
     {
 	/* This assumes that the voice compiler has generated an extra

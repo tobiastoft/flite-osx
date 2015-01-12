@@ -2,7 +2,7 @@
 ;;;                                                                     ;;;
 ;;;                  Language Technologies Institute                    ;;;
 ;;;                     Carnegie Mellon University                      ;;;
-;;;                      Copyright (c) 2007-2009                        ;;;
+;;;                      Copyright (c) 2007-2014                        ;;;
 ;;;                        All Rights Reserved.                         ;;;
 ;;;                                                                     ;;;
 ;;; Permission is hereby granted, free of charge, to use and distribute ;;;
@@ -35,18 +35,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;                                                                     ;;;
 ;;; Convert a clustergen voice to flite                                 ;;;
+;;; (Oct 2014) support for random forests                                ;;;
 ;;;                                                                     ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Used for getting smaller models, if non-zero this will reduce the 
 ;; order of the dumped models from whatever it is (probably 24) to this
 ;; It does the right thing with statics and dynamics and stddev
+(defvar cg:relevant_params nil) ;; a list of param ranges to dump
 (defvar cg_reduced_order 0)
 (if (> cg_reduced_order 0) ;; just to remind me
     (format t "\n***** CG: note reducing order to %d *****\n\n" 
             cg_reduced_order))
 (defvar F0MEAN 0.0)
 (defvar F0STD 1.0)
+(defvar num_channels_additive_constant 4)
 
 (define (cg_convert name festvoxdir odir)
   "(cg_convert name clcatfn clcatfnordered cltreesfn festvoxdir odir)
@@ -73,83 +76,133 @@ Convert a festvox clunits (processed) voice into a C file."
    (format ofd "\n")
    (format ofd "extern const cst_cart * const %s_f0_carts[];\n" name )
 
+   (if cg:spamf0
+	(begin
+	  (set! acctrack (track.load "festival/trees/cb.params"))
+	  (format ofd "extern const cst_cart %s_spamf0_phrase_cart;\n" name)
+	  (format ofd "extern const cst_cart %s_spamf0_accent_cart;\n" name)
+	  (format ofd "extern const float * const %s_spamf0_accent_vectors[];\n" name)
+	  (format ofd "#define %s_spamf0_accent_num_channels %d\n" name (track.num_channels acctrack))
+	  (format ofd "#define %s_spamf0_accent_num_frames %d\n" name (track.num_frames acctrack))
+	))
+
    ;; spectral trees
    (set! val_table nil) ;; different val number over the two sets of carts
 
-   (if cg:multimodel
-       (begin ;; MULTIMODAL
-         (format t "cg_convert: converting static spectral trees\n")
-         (set! mfd (fopen (path-append odir "paramfiles.mak") "w"))
-         (format mfd "PARAMMODEL=multimodel\n")
-         (fclose mfd)
-         (set! old_carttoC_extract_answer carttoC_extract_answer)
-         (set! carttoC_extract_answer carttoC_extract_spectral_frame)
-         (cg_convert_carts 
-          (load (format nil "festival/trees/%s_mcep_static.tree" name) t)
-          "static_mcep" name odir)
-         (set! carttoC_extract_answer old_carttoC_extract_answer)
-         (format ofd "\n")
-         (format ofd "extern const cst_cart * const %s_static_mcep_carts[];\n" name )
+   (if cg:rfs_models
+       (set! pms (load "rf_models/mlist" t))
+       (set! pms (list '01)))
 
-         ;; spectral params
-         (format t "cg_convert: converting static spectral params\n")
-         (cg_convert_params
-          (format nil "festival/trees/%s_mcep_static.params" name)
-          (format nil "festival/trees/%s_min_range.scm" name)
-          name "static" odir ofd)
-         (format ofd "extern const unsigned short * const %s_static_model_vectors[];\n" name )
+   (if cg:rfs_models
+       (begin ;; Random Forest Spectral Models 
+         (format t "cg_convert: converting rf spectral trees\n")
+         (mapcar
+          (lambda (pm)
+            (set! old_carttoC_extract_answer carttoC_extract_answer)
+            (set! carttoC_extract_answer carttoC_extract_spectral_frame)
+            (set! val_table nil)
+            (cg_convert_carts 
+             (load (format nil "rf_models/trees_%02d/%s_mcep.tree" pm name) t)
+             (format nil "%02d_mcep" pm) name odir)
+            (set! carttoC_extract_answer old_carttoC_extract_answer)
+            (format ofd "\n")
+            (format ofd "extern const cst_cart * const %s_%02d_mcep_carts[];\n" name pm)
 
-         (set! val_table nil)
-         (format t "cg_convert: converting delta spectral trees\n")
-         (set! old_carttoC_extract_answer carttoC_extract_answer)
-         (set! carttoC_extract_answer carttoC_extract_spectral_frame)
-         (cg_convert_carts 
-          (load (format nil "festival/trees/%s_mcep_delta.tree" name) t)
-          "delta_mcep" name odir)
-         (set! carttoC_extract_answer old_carttoC_extract_answer)
-         (format ofd "\n")
-         (format ofd "extern const cst_cart * const %s_delta_mcep_carts[];\n" name )
-
-         ;; spectral params
-         (format t "cg_convert: converting delta spectral params\n")
-         (cg_convert_params
-          (format nil "festival/trees/%s_mcep_delta.params" name)
-          (format nil "festival/trees/%s_min_range.scm" name)
-          name "delta" odir ofd)
-         (format ofd "extern const unsigned short * const %s_delta_model_vectors[];\n" name )
-
-         )
-       (begin ;; SINGLE MODEL
+            ;; spectral params
+            (format t "cg_convert:   converting model_%02d spectral params\n" pm)
+            (cg_convert_params
+             (format nil "rf_models/trees_%02d/%s_mcep.params" pm name)
+             (format nil "festival/trees/%s_min_range.scm" name)
+             name (format nil "%02d" pm) odir ofd)
+         (format ofd "extern const unsigned short * const %s_%02d_model_vectors[];\n" name pm ))
+          pms))
+       (begin ;; Non-random forest spectral models (one model)
          (format t "cg_convert: converting single spectral trees\n")
-         (set! mfd (fopen (path-append odir "paramfiles.mak") "w"))
-         (format mfd "PARAMMODEL=single\n")
-         (fclose mfd)
          (set! old_carttoC_extract_answer carttoC_extract_answer)
          (set! carttoC_extract_answer carttoC_extract_spectral_frame)
-
+         (set! val_table nil)
          (cg_convert_carts 
           (load (format nil "festival/trees/%s_mcep.tree" name) t)
-          "single_mcep" name odir)
+          "01_mcep" name odir)
          (set! carttoC_extract_answer old_carttoC_extract_answer)
          (format ofd "\n")
-         (format ofd "extern const cst_cart * const %s_single_mcep_carts[];\n" name )
-
+         (format ofd "extern const cst_cart * const %s_01_mcep_carts[];\n" name )
          ;; spectral params
-         (format t "cg_convert: converting single spectral params\n")
+         (format t "cg_convert:    converting model_01 spectral params\n")
          (cg_convert_params
           (format nil "festival/trees/%s_mcep.params" name)
           (format nil "festival/trees/%s_min_range.scm" name)
-          name "single" odir ofd)
-         (format ofd "extern const unsigned short * const %s_single_model_vectors[];\n" name )
+          name "01" odir ofd)
+         (format ofd "extern const unsigned short * const %s_01_model_vectors[];\n" name )
          ))
+
+   (format ofd "#define %s_num_param_models %d\n" name (length pms))
+   (format ofd "const int %s_num_channels_table[] = {\n" name)
+   (mapcar
+    (lambda (pm)
+      (format ofd "   %s_%02d_num_channels,\n" name pm))
+    pms)
+   (format ofd "0};\n")
+   (format ofd "const int %s_num_frames_table[] = {\n" name)
+   (mapcar
+    (lambda (pm)
+      (format ofd "   %s_%02d_num_frames,\n" name pm))
+    pms)
+   (format ofd "0};\n")
+   (format ofd "const unsigned short **%s_model_vectors_table[] = {\n" name)
+   (mapcar
+    (lambda (pm)
+      (format ofd "   %s_%02d_model_vectors,\n" name pm))
+    pms)
+   (format ofd "NULL};\n")
+   (format ofd "const cst_cart **%s_mcep_carts_table[] = {\n" name)
+   (mapcar
+    (lambda (pm)
+      (format ofd "   %s_%02d_mcep_carts,\n" name pm))
+    pms)
+   (format ofd "NULL};\n")
     
-   ;; duration model (car conversion)
-   (format t "cg_convert: converting duration model\n")
-   (cg_convert_durmodel
-    (format nil "festvox/%s_durdata_cg.scm" name)
-    name odir)   
-   (format ofd "extern const dur_stat * const %s_dur_stats[];\n" name)
-   (format ofd "extern const cst_cart %s_dur_cart;\n" name)
+   ;; duration model (cart conversion)
+   (if cg:rfs_dur_models
+       (set! dms (load "dur_rf_models/mlist" t))
+       (set! dms '(01)))
+
+   (if cg:rfs_dur_models
+       (begin
+         (format t "cg_convert: converting rf duration models\n")
+         (mapcar 
+             (lambda (dm)
+               (format t "cg_convert:    converting %02d duration model\n" dm)
+               (set! val_table nil)
+               (cg_convert_durmodel
+                (format nil "dur_rf_models/dur_%02d/%s_durdata_cg.scm" dm name)
+                (format nil "%s_cg_%02d_" name dm) odir)
+               (format ofd "extern const dur_stat * const %s_cg_%02d_dur_stats[];\n" name dm)
+              (format ofd "extern const cst_cart %s_cg_%02d_dur_cart;\n" name dm))
+             dms))
+       (begin
+         (format t "cg_convert: converting single duration model\n")
+         (format t "cg_convert:    converting 01 duration model\n")
+         (cg_convert_durmodel
+          (format nil "festvox/%s_durdata_cg.scm" name)
+          (format nil "%s_cg_%02d_" name 01) odir)
+         (format ofd "extern const dur_stat * const %s_cg_%02d_dur_stats[];\n" name 01)
+         (format ofd "extern const cst_cart %s_cg_%02d_dur_cart;\n" name 01)
+       ))
+
+   (format ofd "#define %s_num_dur_models %d\n" name (length dms))
+   (format ofd "const dur_stat **%s_dur_stats_table[] = {\n" name)
+   (mapcar
+    (lambda (dm)
+      (format ofd "   %s_cg_%02d_dur_stats,\n" name dm))
+    dms)
+   (format ofd "NULL};\n")
+   (format ofd "const cst_cart *%s_dur_cart_table[] = {\n" name)
+   (mapcar
+    (lambda (dm)
+      (format ofd "   &%s_cg_%02d_dur_cart,\n" name dm))
+    dms)
+   (format ofd "NULL};\n")
 
    ;; phone to states
    (format t "cg_convert: converting phone to state map\n")
@@ -187,22 +240,17 @@ Convert a festvox clunits (processed) voice into a C file."
 
    (if cg:mixed_excitation
        (begin
-         (set! memf me_mix_filters)
+         ;; Uses filters in festvox/mef.track (from Jan 2013)
          (set! n 0)
          (while (< n 5)
             (format ofd "const double %s_me_filter_%d[] = {\n" name n)
             (set! o 0)
-            (while (< o 47)
-               (format ofd "%f, " (car memf))
-               (set! memf (cdr memf))
+            (while (< o 46)
+               (format ofd "%f, " (track.get me_filter_track n o))
                (set! o (+ o 1)))
-            (format ofd "%f\n};\n" (car memf))
-            (set! memf (cdr memf))
+            (format ofd "%f\n};\n" (track.get me_filter_track n o))
             (set! n (+ n 1))
          )
-         (if memf
-             (format t "Error still %d values left in me_filter\n"
-                     (length memf)))
          (format ofd "const double * const %s_me_h[] = {\n" name)
          (format ofd "   %s_me_filter_0,\n" name)
          (format ofd "   %s_me_filter_1,\n" name)
@@ -216,43 +264,49 @@ Convert a festvox clunits (processed) voice into a C file."
    (format ofd "  \"%s\",\n" name)
    (format ofd "  %s_types,\n" name)
    (format ofd "  %s_num_types,\n" name)
-   (format ofd "  16000,\n") ;; sample rate
+   (if (boundp 'framerate)
+       (format ofd "  %d,\n" framerate) ;; sample rate
+       (format ofd "  16000,\n"))       ;; sample rate
 
    (format ofd "  %f,%f,\n" F0MEAN F0STD) 
 
    (format ofd "  %s_f0_carts,\n" name)
-   (if cg:multimodel
+   (format ofd "  %s_num_param_models,\n" name)
+   (format ofd "  %s_mcep_carts_table,\n" name)
+   (if cg:spamf0
        (begin
-         (format ofd "  %s_static_mcep_carts,\n" name)
-         (format ofd "  %s_delta_mcep_carts,\n" name) 
-         (format ofd "  NULL,\n")
-
-         (format ofd "  %s_static_num_channels,\n" name)
-         (format ofd "  %s_static_num_frames,\n" name)
-         (format ofd "  %s_static_model_vectors,\n" name)
-
-         (format ofd "  %s_delta_num_channels,\n" name)
-         (format ofd "  %s_delta_num_frames,\n" name)
-         (format ofd "  %s_delta_model_vectors,\n" name)
-
-         (format ofd "  0,0,NULL,\n")
-        )
+         (set! mfd (fopen (path-append odir "paramfiles.mak") "a"))
+         (format mfd "SPAMF0=true\n")
+         (fclose mfd)
+         (format ofd "  &%s_spamf0_accent_cart,\n" name)
+         (format ofd "  &%s_spamf0_phrase_cart,\n" name)
+         )
        (begin
-         (format ofd "  %s_single_mcep_carts,\n" name)
+         (set! mfd (fopen (path-append odir "paramfiles.mak") "a"))
+         (format mfd "SPAMF0=false\n")
+         (fclose mfd)
          (format ofd "  NULL,NULL,\n")
+         )
+       )
+   (format ofd "  %s_num_channels_table,\n" name)
+   (format ofd "  %s_num_frames_table,\n" name)
+   (format ofd "  %s_model_vectors_table,\n" name)
 
-         (format ofd "  %s_single_num_channels,\n" name)
-         (format ofd "  %s_single_num_frames,\n" name)
-         (format ofd "  %s_single_model_vectors,\n" name)
-         (format ofd "  0,0,NULL,\n")
-         (format ofd "  0,0,NULL,\n")))
-
+   (if cg:spamf0
+       (begin
+         (format ofd "  %s_spamf0_accent_num_channels,\n" name)
+         (format ofd "  %s_spamf0_accent_num_frames,\n" name)
+         (format ofd "  %s_spamf0_accent_vectors,\n" name)
+         )
+       (format ofd "  0,0,NULL,\n")
+       )
    (format ofd "  %s_model_min,\n" name)
    (format ofd "  %s_model_range,\n" name)
    (format ofd "  %f, /* frame_advance */\n" cg:frame_shift)
 
-   (format ofd "  %s_dur_stats,\n" name)
-   (format ofd "  &%s_dur_cart,\n" name)
+   (format ofd "  %s_num_dur_models,\n" name)
+   (format ofd "  %s_dur_stats_table,\n" name)
+   (format ofd "  %s_dur_cart_table,\n" name)
    (format ofd "  %s_phone_states,\n" name)
 
    (format ofd "  1, /* 1 if mlpg required */\n")
@@ -260,7 +314,7 @@ Convert a festvox clunits (processed) voice into a C file."
    (format ofd "  %s_dynwinsize,\n" name)
 
    (format ofd "  %f, /* mlsa_alpha */\n" mlsa_alpha_param)
-   (format ofd "  %f, /* mlsa_beta */\n" mlsa_beta_param)
+   (format ofd "  %f, /* mlsa_beta */\n" 0.4)
 
    (if cg:multimodel
        (format ofd "  1, /* cg:multimodel */\n")
@@ -270,11 +324,15 @@ Convert a festvox clunits (processed) voice into a C file."
        (begin
          (format ofd "  1, /* cg:mixed_excitation */\n")
          (format ofd "  5,48, /* filter sizes */\n")
-         (format ofd "  %s_me_h \n" name))
+         (format ofd "  %s_me_h, \n" name))
        (begin
          (format ofd "  0, /* cg:mixed_excitation */\n")
          (format ofd "  0,0, /* cg:mixed_excitation */\n")
-         (format ofd "  NULL \n")))
+         (format ofd "  NULL, \n")))
+   (if cg:spamf0
+	(format ofd "  1, // cg:spamf0\n")
+	(format ofd "  0, // cg:spamf0\n"))
+   (format ofd "  1.5 /* gain */\n")
    (format ofd "};\n")
 
    (fclose ofd)
@@ -308,8 +366,8 @@ Convert a festvox clunits (processed) voice into a C file."
   (set! phonedurs (cadr (car (cddr (car durmodel)))))
   (set! zdurtree (cadr (car (cddr (cadr durmodel)))))
 
-  (set! dfd (fopen (path-append odir (string-append name "_cg_durmodel.c")) "w"))
-  (set! dfdh (fopen (path-append odir (string-append name "_cg_durmodel.h")) "w"))
+  (set! dfd (fopen (path-append odir (string-append name "durmodel.c")) "w"))
+  (set! dfdh (fopen (path-append odir (string-append name "durmodel.h")) "w"))
   (format dfd "/*****************************************************/\n")
   (format dfd "/**  Autogenerated durmodel_cg for %s    */\n" name)
   (format dfd "/*****************************************************/\n")
@@ -317,7 +375,7 @@ Convert a festvox clunits (processed) voice into a C file."
   (format dfd "#include \"cst_synth.h\"\n")
   (format dfd "#include \"cst_string.h\"\n")
   (format dfd "#include \"cst_cart.h\"\n")
-  (format dfd "#include \"%s_cg_durmodel.h\"\n\n" name)
+  (format dfd "#include \"%sdurmodel.h\"\n\n" name)
 
   (mapcar
    (lambda (s)
@@ -328,7 +386,7 @@ Convert a festvox clunits (processed) voice into a C file."
    phonedurs)
   (format dfd "\n")
 
-  (format dfd "const dur_stat * const %s_dur_stats[] = {\n" name)
+  (format dfd "const dur_stat * const %sdur_stats[] = {\n" name)
   (mapcar
    (lambda (s)
      (format dfd "   &dur_state_%s,\n" (cg_normal_phone_name (car s))))
@@ -339,7 +397,7 @@ Convert a festvox clunits (processed) voice into a C file."
   (set! current_node -1)
   (set! feat_nums nil)
   (do_carttoC dfd dfdh 
-              (format nil "%s_%s" name "dur")
+              (format nil "%s%s" name "dur")
               zdurtree)
 
   (fclose dfd)
@@ -400,19 +458,41 @@ Convert a festvox clunits (processed) voice into a C file."
        (set! i (+ 1 i)))
     (format mfd "};\n\n")
 
+    (if cg:mixed_excitation
+	(begin
+	  (set! num_channels_additive_constant 14)
+	  ))
+    
     (if (> cg_reduced_order 0)
-        (format cofd "#define %s_%s_num_channels %d\n" 
-                name type (+ 4 (* 4 cg_reduced_order)))
-        (format cofd "#define %s_%s_num_channels %d\n" name type num_channels))
-
+	(format cofd "#define %s_%s_num_channels %d\n"
+		name type (+ num_channels_additive_constant (* 4 cg_reduced_order)))
+	(format cofd "#define %s_%s_num_channels %d\n" name type num_channels))
+    
     (format cofd "#define %s_%s_num_frames %d\n" name type num_frames)
-
+  
     (fclose mfd)
 
-))
+    ))
 
 (define (mcepcoeff_norm c min range)
-  (* (/ (- c min) range) 65535))
+  (let ((x (* (/ (- c min) range) 65535)))
+    (cond
+     ((< x 0) 0.0)
+     ((> x 65535) 65535)
+     (t x))))
+
+(define (output_accent_frame name track f ofd)
+  "(output_accent_frame name track frame ofd)
+Ouput this accent params."
+  (let ((i 0) (nc (track.num_channels track)))
+    ;(format ofd "static const unsigned short %s_spamf0_accent_frame_%d[] = { \n" name f)
+    (format ofd "static const float %s_spamf0_accent_frame_%d[] = { \n" name f)
+	  (while (< i nc)
+                       (format ofd " %f," (track.get track f i))
+                 (set! i (+ 1 i)))
+          (format ofd " };\n")
+)
+)
 
 (define (output_param_frame name type track f ofd)
   "(output_param_frame name track frame ofd)
@@ -422,27 +502,54 @@ Ouput this frame."
     (set! min_range mcep_min_range)
     (set! real_order (/ (- nc 4) 4))
     (set! new_min_range nil)
-      
-    (while (< i nc)
-       (if (or (eq cg_reduced_order 0)
-               (< i (* 2 (+ 1 cg_reduced_order))) ;; static and static_stddev
-               (and (> i (- (/ nc 2) 1))  ;; deltas and delta_stddev
-                    (< i (+ (/ nc 2) (* 2 cg_reduced_order))))
-               (> i (- nc 3)))
-           (begin
-            ; (format t "i is %d %d\n" i (+ (/ nc 2) (* 2 cg_reduced_order)))
-             (format ofd " %d," 
-                     (mcepcoeff_norm 
-                      (track.get track f i)
-                      (caar min_range)
-                      (cadr (car min_range))))
-             (set! new_min_range (cons (car min_range) new_min_range))
-             ))
-       (set! min_range (cdr min_range))
-       (set! i (+ 1 i)))
-    (format ofd " };\n")
+
+    (if cg:relevant_params
+        (begin ;; specified number of parameters
+          )
+    (if cg:mixed_excitation
+	(begin
+	  
+	  (while (< i nc)
+		 (if (or (eq cg_reduced_order 0)
+			 (< i (* 2 (+ 1 cg_reduced_order))) ;; static and static_stddev
+			 (and (> i (- (/ (- nc 10) 2) 1))  ;; deltas and delta_stddev
+			      (< i (+ (/ (- nc 10) 2) (* 2 cg_reduced_order))))
+			 (> i (- nc 13)))
+		     (begin
+					; (format t "i is %d %d\n" i (+ (/ nc 2) (* 2 cg_reduced_order)))
+		       (format ofd " %d," 
+			       (mcepcoeff_norm 
+				(track.get track f i)
+				(caar min_range)
+				(cadr (car min_range))))
+		       (set! new_min_range (cons (car min_range) new_min_range))
+		       ))
+		 (set! min_range (cdr min_range))
+		 (set! i (+ 1 i)))
+	  (format ofd " };\n")
+	  )
+	(begin
+	  (while (< i nc)
+                 (if (or (eq cg_reduced_order 0)
+                         (< i (* 2 (+ 1 cg_reduced_order))) ;; static and static_stddev
+                         (and (> i (- (/ nc 2) 1))  ;; deltas and delta_stddev
+                              (< i (+ (/ nc 2) (* 2 cg_reduced_order))))
+                         (> i (- nc 3)))
+                     (begin
+                                        ; (format t "i is %d %d\n" i (+ (/ nc 2) (* 2 cg_reduced_order)))
+                       (format ofd " %d,"
+                               (mcepcoeff_norm
+                                (track.get track f i)
+                                (caar min_range)
+                                (cadr (car min_range))))
+                       (set! new_min_range (cons (car min_range) new_min_range))
+                       ))
+                 (set! min_range (cdr min_range))
+                 (set! i (+ 1 i)))
+          (format ofd " };\n")
+          )))
     )
-)
+  )
 
 (define (carttoC_extract_spectral_frame ofdh tree)
   "(carttoC_extract_spectral_frame tree)
@@ -498,7 +605,12 @@ Output cg selection carts into odir/name_carts.c"
 )
 
 (define (cg_normal_phone_name x)
-  ;; Some phonenames aren't valid C labels
+  (cg_normal_phone_name_base
+   (cg_normal_phone_name_base
+    (cg_normal_phone_name_base x))))
+
+(define (cg_normal_phone_name_base x)
+  ;; Some phone names aren't valid C labels
   (cond
    ((string-matches x ".*@.*" x) 
     (intern
@@ -512,7 +624,30 @@ Output cg selection carts into odir/name_carts.c"
       (string-before x ":")
       "sc"
       (string-after x ":"))))
+   ((string-matches x ".*=.*")
+    (intern
+     (string-append
+      (string-before x "=")
+      "eq"
+      (string-after x "="))))
+   ((string-matches x ".*>.*")
+    (intern
+     (string-append
+      (string-before x ">")
+      "gt"
+      (string-after x ">"))))
+   ((string-matches x ".*}.*")
+    (intern
+     (string-append
+      (string-before x "}")
+      "rb"
+      (string-after x "}"))))
+   ((string-matches x ".*~.*")
+    (intern
+     (string-append
+      (string-before x "~")
+      "tilde"
+      (string-after x "~"))))
    (t x)))
 
 (provide 'make_cg)
-

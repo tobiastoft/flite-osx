@@ -2,7 +2,7 @@
 /*                                                                       */
 /*                  Language Technologies Institute                      */
 /*                     Carnegie Mellon University                        */
-/*                      Copyright (c) 1999-2000                          */
+/*                      Copyright (c) 1999-2011                          */
 /*                        All Rights Reserved.                           */
 /*                                                                       */
 /*  Permission is hereby granted, free of charge, to use and distribute  */
@@ -31,10 +31,10 @@
 /*                                                                       */
 /*************************************************************************/
 /*             Author:  Alan W Black (awb@cs.cmu.edu)                    */
-/*               Date:  December 2000                                    */
+/*               Date:  November 2011                                    */
 /*************************************************************************/
 /*                                                                       */
-/*  A simple voice defintion                                             */
+/*  Kal diphone, rebuilt with g721 encoded residuals to save 500K        */
 /*                                                                       */
 /*************************************************************************/
 

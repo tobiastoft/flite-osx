@@ -52,6 +52,12 @@ int main(int argc, char **argv)
     double b;
     int best,x, y;
     const char *f1, *f2;
+    float v1,v2,v3,c;
+    float xsum,xsumsq,xcount;
+    float ysum,ysumsq,ycount;
+    float xxsum,xxsumsq,xxcount;
+    float yysum,yysumsq,yycount;
+    float xysum,xysumsq,xycount;
 
     args = new_features();
     files =
@@ -88,11 +94,11 @@ int main(int argc, char **argv)
         l = w1->num_samples;
     b=-1;
     best = -80;
-    y = -20;
-    x = -53;
+
+    for (y=-80; y < 80; y++)
+    {
         for (i1=80,i2=80; i1 < l-160; i1++,i2++)
         {
-            /*            d = w1->samples[i1+y] - ((1.0+(x/100.0)) * (float)w2->samples[i2]); */
             d = abs(w1->samples[i1+y]) - ((1.0+(x/100.0)) * (float)abs(w2->samples[i2]));
             s += d*d;
         }
@@ -103,10 +109,41 @@ int main(int argc, char **argv)
         if (s < b)
         {
             b = s;
-            best = x;
+            best = y;
+            /*            printf("New best %f x %d\n",b,best); */
         }
+    }
+
+    /* Find correlation */
+    xcount = xsum = xsumsq = 0;
+    ycount = ysum = ysumsq = 0;
+    xycount = xysum = xysumsq = 0;
+    xxcount = xxsum = xxsumsq = 0;
+    yycount = yysum = yysumsq = 0;
+    for (i1=80+best,i2=80; i1 < l-160; i1++,i2++)
+    {
+        xcount++; xsum += w1->samples[i1]; 
+        xsumsq += w1->samples[i1]*w1->samples[i1];
+
+        ycount++; ysum += w2->samples[i2]; 
+        ysumsq += w2->samples[i2]*w2->samples[i2];
+
+        xxcount++; xxsum += w1->samples[i1] * w1->samples[i1];
+        xxsumsq += w1->samples[i1]*w1->samples[i1]*w1->samples[i1]*w1->samples[i1];
+
+        yycount++; yysum += w2->samples[i2] * w2->samples[i2]; 
+        yysumsq += w2->samples[i2]*w2->samples[i2] * w2->samples[i2]*w2->samples[i2];
         
-    printf("%f %d\n",sqrt(b),best);
+        xycount++; xysum += w1->samples[i1] * w2->samples[i2];
+        xysumsq += w1->samples[i1]*w1->samples[i1]*w2->samples[i2]*w2->samples[i2];
+
+    }
+    v1 = (xysum/xycount)-((xsum/xcount)*(ysum/ycount));
+    v2 = (xxsum/xxcount)-((xsum/xcount)*(xsum/xcount));
+    v3 = (yysum/yycount)-((ysum/ycount)*(ysum/ycount));
+    c = v1/sqrt(v2*v3);
+        
+    printf("%2.3f %0.3f %d\n",sqrt(b),c,best);
 
     return 0;
 }

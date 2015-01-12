@@ -69,7 +69,7 @@ cst_utterance *get_diphone_units(cst_utterance *utt)
     float end0,end1;
     char diphone_name[22];
     cst_diphone_db *udb;
-    int unit_entry;
+    int unit_entry = -1;
 
     udb = val_diphone_db(utt_feat_val(utt,"diphone_db"));
     utt_set_feat(utt,"sts_list",sts_list_val(udb->sts));
@@ -80,12 +80,26 @@ cst_utterance *get_diphone_units(cst_utterance *utt)
 	 s0 && item_next(s0); s0=s1)
     {
 	s1 = item_next(s0);
-	cst_sprintf(diphone_name,
-		    "%.10s-%.10s",
-		    item_name(s0),
-		    item_name(s1));
+        unit_entry = -1;
+        if (cst_streq("-",ffeature_string(s0,"ph_vc")) &&
+            cst_streq("-",ffeature_string(s0,"R:SylStructure.n.ph_vc")))
+        {   /* Might have consonant cluster diphones */
+            cst_sprintf(diphone_name,
+                        "%.10s_-_%.10s",
+                        item_name(s0),
+                        item_name(s1));
+            unit_entry = get_diphone_entry(udb,diphone_name);
+        }
+        
+        if (unit_entry == -1) /* no consonant cluster diphone */
+        {
+            cst_sprintf(diphone_name,
+                        "%.10s-%.10s",
+                        item_name(s0),
+                        item_name(s1));
 
-	unit_entry = get_diphone_entry(udb,diphone_name);
+            unit_entry = get_diphone_entry(udb,diphone_name);
+        }
 
 	if (unit_entry == -1)
 	{

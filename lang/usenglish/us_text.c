@@ -50,6 +50,7 @@ static cst_val *state_name(const char *name,cst_item *t);
 /* compiled us regexes */
 #include "us_regexes.h"
 
+/* Note you need to also update the wandm regex in make_us_regeses too */
 static const char * const wandm_abbrevs[99][2] =
 {
     { "LB", "pounds" },
@@ -60,6 +61,9 @@ static const char * const wandm_abbrevs[99][2] =
     { "FT", "feet" },
     { "kg", "kilograms" },
     { "km", "kilometers" },
+    { "cm", "centimeters" },
+    { "mm", "millimeters" },
+    { "ml", "milliliters" },
     { "oz", "ounces" },
     { "hz", "hertz" },
     { "Hz", "hertz" },
@@ -67,6 +71,10 @@ static const char * const wandm_abbrevs[99][2] =
     { "KHz", "kilohertz" },
     { "MHz", "megahertz" },
     { "GHz", "gigahertz" },
+    { "KB", "kilobytes" },
+    { "GB", "gigabytes" },
+    { "MB", "megabytes" },
+    { "TB", "terabytes" },
     { NULL, NULL },
 };
 
@@ -82,16 +90,6 @@ static const char * const eedwords[] = {
     "will",
     "shall",
     NULL};
-
-void us_text_init()
-{
-    /* Nothing */
-}
-
-void us_text_deinit()
-{
-    /* Nothing */
-}
 
 static int rex_like(const cst_item *t)
 {
@@ -211,13 +209,55 @@ static cst_val *add_break(cst_val *l)
     return l;
 }
 
+static int contains_unicode_single_quote(const char *name)
+{
+    static const char *unicode_single_quote = "’";
+    int i;
+
+    for (i=0; name[i]; i++)
+    {
+        /* No check if name is long enough as it'll have NULL before end */
+        if ((name[i] == unicode_single_quote[0]) &&
+            (name[i+1] == unicode_single_quote[1]) &&
+            (name[i+2] == unicode_single_quote[2]))
+            return TRUE;
+    }
+    return FALSE;
+}
+
+static char *map_unicode_single_quote(const char *name)
+{
+    static const char *unicode_single_quote = "’";
+    int i,j;
+    char *aaa = cst_strdup(name);  /* it'll always get shorter */
+
+    for (i=0,j=0; name[i]; i++,j++)
+    {
+        if ((name[i] == unicode_single_quote[0]) &&
+            (name[i+1] == unicode_single_quote[1]) &&
+            (name[i+2] == unicode_single_quote[2]))
+        {
+            aaa[j] = '\'';
+            i+=2;
+        }
+        else
+            aaa[j] = name[i];
+    }
+    aaa[j] = '\0';
+
+    return aaa;
+}
+
 static cst_val *us_tokentowords_one(cst_item *token, const char *name)
 {
     /* Return list of words that expand token/name */
     char *p, *aaa, *bbb, *ccc;
     int i,j,k,l;
-    cst_val *r, *s;
+    cst_val *r, *s, *ss;
+    const cst_val *rr;
     const char *nsw = "";
+    const char *ssml_alias = "";
+    const char *token_name = "";
     cst_lexicon *lex;
     cst_utterance *utt;
     /* printf("token_name %s name %s\n",item_name(token),name); */
@@ -228,14 +268,33 @@ static cst_val *us_tokentowords_one(cst_item *token, const char *name)
        nsw feature and this function should deal with it (doesn't yet though)*/
     if (item_feat_present(token,"phones"))
 	return cons_val(string_val(name),NULL);
-
+    
     if (item_feat_present(token,"nsw"))
 	nsw = item_feat_string(token,"nsw");
+
+    token_name = item_name(token);
+
+    if ((item_feat_present(token,"ssml_alias")) &&
+        (!cst_streq(token_name,name)))  /* and we are not recursing */
+    {
+        /* SSML has given a substitute for this (and more) tokens */
+        /* NOTE: the alias is not put through text normalization */
+        ssml_alias = item_feat_string(token,"ssml_alias");
+        if (cst_streq(ssml_alias,ffeature_string(token,"p.ssml_alias")))
+            /* The first token gets the substitution */
+            return NULL;
+        else
+        {
+            return cons_val(string_val(ssml_alias),NULL);
+        }
+    }
 
     utt = item_utt(token);
     lex = val_lexicon(feat_val(utt->features,"lexicon"));
 
-    if ((cst_streq("a",name) || cst_streq("A",name)) &&
+    if (cst_streq("1",get_param_string(item_feats(token),"ssml_comment","0")))
+        r = NULL;
+    else if ((cst_streq("a",name) || cst_streq("A",name)) &&
         ((item_next(token) == 0) ||
          (!cst_streq(name,item_name(token))) ||
          (!cst_streq("",ffeature_string(token,"punc")))))
@@ -339,17 +398,37 @@ static cst_val *us_tokentowords_one(cst_item *token, const char *name)
     else if (cst_regex_match(digits2dash,name))
     {   /* 999-999-999 etc */
 	bbb = cst_strdup(name);
-	for (r=0,aaa=p=bbb; *p; p++)
+	for (ss=0,aaa=p=bbb; *p; p++)
 	{
 	    if (*p == '-')
 	    {
 		*p = '\0';
-		r = val_append(val_reverse(add_break(en_exp_digits(aaa))),r);
+		ss = cons_val(string_val(aaa),ss);
 		aaa = p+1;
 	    }
 	}
-	r = val_append(val_reverse(add_break(en_exp_digits(aaa))),r);
-	r = val_reverse(r);
+        ss = cons_val(string_val(aaa),ss);
+        if ((val_length(ss) == 2) &&
+            (atoi(val_string(val_car(val_cdr(ss)))) <
+             atoi(val_string(val_car(ss)))))  /* its a number range */
+        {
+            /* Should get 22-23 November, or 1998-1999 right */
+            r = 
+                val_append(us_tokentowords_one(token,val_string(val_car(val_cdr(ss)))),
+                  cons_val(string_val("to"),
+                   us_tokentowords_one(token,val_string(val_car(ss)))));
+        }
+        else
+        {  /* Its just a bunch of ids */
+            r = 0;
+            for (rr=ss; rr; rr=val_cdr(rr))
+            {
+                r = val_append(
+                     add_break(en_exp_digits(val_string(val_car(rr)))),r);
+
+            }
+        }
+        delete_val(ss);
 	cst_free(bbb);
     }
     else if (cst_regex_match(cst_rx_digits,name))
@@ -452,7 +531,7 @@ static cst_val *us_tokentowords_one(cst_item *token, const char *name)
     else if ((cst_streq(name,"read")) ||
              (cst_streq(name,"lead")))
     {   /* checking WSJ examples, this seems a quick and easy way to */
-        /* get manty of these correct */
+        /* get many of these correct */
         const char *pname = ffeature_string(token,"p.name");
 
         for (i=0; eedwords[i]; i++)
@@ -587,13 +666,22 @@ static cst_val *us_tokentowords_one(cst_item *token, const char *name)
     {   /* 60s and 7s and 9s */
 	aaa = cst_strdup(name);
 	aaa[cst_strlen(name)-1] = '\0';
-	r = val_append(en_exp_number(aaa),
+	r = val_append(us_tokentowords_one(token,aaa),
 		       cons_val(string_val("'s"),0));
 	cst_free(aaa);
     }
+    else if (contains_unicode_single_quote(name))
+    {
+        /* A single quote is sometimes rendered as unicode "’" */
+        /* so we map it back to an ascii single quote ' */
+        aaa = map_unicode_single_quote(name);
+        r = us_tokentowords_one(token, aaa);
+        cst_free(aaa);
+        return r;
+    }
     else if ((p=(cst_strrchr(name,'\''))))
     {
-	static const char *pc[] = { "'s", "'ll", "'ve", "'d", NULL };
+	static const char * const pc[] = { "'s", "'ll", "'ve", "'d", NULL };
 
 	bbb = cst_downcase(p);
 	if (cst_member_string(bbb, pc))
@@ -674,7 +762,6 @@ static cst_val *us_tokentowords_one(cst_item *token, const char *name)
     }
     else if (cst_regex_match(wandm,name))
     {   /* weights and measures */
-
         for (j=cst_strlen(name)-1; j > 0; j--)
             if (cst_strchr("0123456789",name[j]))
                 break;
@@ -720,7 +807,7 @@ static cst_val *us_tokentowords_one(cst_item *token, const char *name)
     }
     else if ((cst_strlen(name) > 1) && 
 	     (cst_regex_match(cst_rx_alpha,name)) &&
-             (!in_lex(lex,name,NULL)) &&
+             (!in_lex(lex,name,NULL,NULL)) &&  // AUP: Added 4th argument (voice feats) as NULL, needs to be revisited later.
 	     (!us_aswd(name)))
         /* Still not quiet right, if there is a user_lex we need to check */
         /* it too -- but user_lex isn't user setable yet */

@@ -234,7 +234,7 @@ int cst_wave_save_riff(cst_wave *w,const char *filename)
 
 int cst_wave_save_riff_fd(cst_wave *w, cst_file fd)
 {
-    char *info;
+    const char *info;
     short d_short;
     int d_int, n;
     int num_bytes;

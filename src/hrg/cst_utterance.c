@@ -96,7 +96,7 @@ int utt_relation_present(cst_utterance *u,const char *name)
     return feat_present(u->relations,name);
 }
 
-cst_relation *utt_relation(cst_utterance *u,const char *name)
+cst_relation *utt_relation(const cst_utterance *u,const char *name)
 {
     const cst_val *v = feat_val(u->relations,name);
     if (v != NULL)

@@ -62,6 +62,10 @@
 #include "cst_wave.h"
 #include "cst_audio.h"
 
+#ifdef ANDROID
+#define SPEED_HACK
+#endif
+
 #ifdef UNDER_CE
 #define SPEED_HACK
 /* This is one of those other things you shouldn't do, but it makes
@@ -87,7 +91,7 @@ cst_wave *mlsa_resynthesis(const cst_track *params,
 {
     /* Resynthesizes a wave from given track */
     cst_wave *wave = 0;
-    int sr = 16000;
+    int sr = cg_db->sample_rate;
     double shift;
 
     if (params->num_frames > 1)
@@ -103,7 +107,7 @@ cst_wave *mlsa_resynthesis(const cst_track *params,
 static cst_wave *synthesis_body(const cst_track *params, /* f0 + mcep */
                                 const cst_track *str,
                                 double fs,	/* sampling frequency (Hz) */
-                                double framem,	/* FFT length */
+                                double framem,	/* frame size */
                                 cst_cg_db *cg_db,
                                 cst_audio_streaming_info *asi)
 {
@@ -116,29 +120,26 @@ static cst_wave *synthesis_body(const cst_track *params, /* f0 + mcep */
     int stream_mark;
     int rc = CST_AUDIO_STREAM_CONT;
     int num_mcep;
+    double ffs = fs;
 
     num_mcep = params->num_channels-1;
-    framel = (int)(framem * fs / 1000.0);
-    init_vocoder(fs, framel, num_mcep, &vs, cg_db);
+    /* For SPEED_HACK we could reduce num_mcep, and it will run faster */
+    /* num_mcep -= 10; */
+    framel = (int)(0.5 + (framem * ffs / 1000.0)); /* 80 for 16KHz */
+    init_vocoder(ffs, framel, num_mcep, &vs, cg_db);
 
     if (str != NULL)
         vs.gauss = MFALSE;
 
     /* synthesize waveforms by MLSA filter */
     wave = new_wave();
-    cst_wave_resize(wave,params->num_frames * (framel + 2),1);
-#ifdef SPEED_HACK
-    /* This is a SPECTACULAR hack -- basically resample the original */
-    /* files to 8KHz but label them as 16KHz and do the full build */
-    /* then after synthesis get them to be played at 8KHz -- it works */
-    wave->sample_rate = 8000; 
-#else
+    cst_wave_resize(wave,params->num_frames * framel,1);
     wave->sample_rate = fs; 
-#endif
+
     mcep = cst_alloc(double,num_mcep+1);
 
     for (t = 0, stream_mark = pos = 0; 
-         (rc == CST_AUDIO_STREAM_CONT) && (t < params->num_frames); 
+         (rc == CST_AUDIO_STREAM_CONT) && (t < params->num_frames);
          t++) 
     {
         f0 = (double)params->frames[t][0];
@@ -146,11 +147,14 @@ static cst_wave *synthesis_body(const cst_track *params, /* f0 + mcep */
             mcep[i-1] = params->frames[t][i];
         mcep[i-1] = 0;
 
-        vocoder(f0, mcep, str, t, num_mcep, cg_db, &vs, wave, &pos);
+        if (str)
+            vocoder(f0, mcep, str->frames[t], num_mcep, cg_db, &vs, wave, &pos);
+        else
+            vocoder(f0, mcep, NULL, num_mcep, cg_db, &vs, wave, &pos);
 
         if (asi && (pos-stream_mark > asi->min_buffsize))
         {
-            rc=(*asi->asc)(wave,stream_mark,pos-stream_mark,0,asi->userdata);
+            rc=(*asi->asc)(wave,stream_mark,pos-stream_mark,0,asi);
             stream_mark = pos;
         }
     }
@@ -158,14 +162,20 @@ static cst_wave *synthesis_body(const cst_track *params, /* f0 + mcep */
 
     if (asi && (rc == CST_AUDIO_STREAM_CONT))
     {   /* drain the last part of the waveform */
-        (*asi->asc)(wave,stream_mark,pos-stream_mark,1,asi->userdata);
+        (*asi->asc)(wave,stream_mark,pos-stream_mark,1,asi);
     }
 
     /* memory free */
     cst_free(mcep);
     free_vocoder(&vs);
 
-    return wave;
+    if (rc == CST_AUDIO_STREAM_STOP)
+    {
+        delete_wave(wave);
+        return NULL;
+    }
+    else
+        return wave;
 }
 
 static void init_vocoder(double fs, int framel, int m, 
@@ -230,7 +240,7 @@ static double plus_or_minus_one()
 }
 
 static void vocoder(double p, double *mc, 
-                    const cst_track *str, int t,
+                    const float *str,
                     int m, cst_cg_db *cg_db,
                     VocoderSetup *vs, cst_wave *wav, long *pos)
 {
@@ -239,7 +249,7 @@ static void vocoder(double p, double *mc,
     double xpulse, xnoise;
     double fxpulse, fxnoise;
     float gain=1.0;
-    
+
     if (cg_db->gain != 0.0)
         gain = cg_db->gain;
    
@@ -251,8 +261,8 @@ static void vocoder(double p, double *mc,
             vs->hpulse[i] = vs->hnoise[i] = 0.0;
             for (j=0; j<vs->ME_num; j++)
             {
-                vs->hpulse[i] += str->frames[t][j] * vs->h[j][i];
-                vs->hnoise[i] += (1 - str->frames[t][j]) * vs->h[j][i];
+                vs->hpulse[i] += str[j] * vs->h[j][i];
+                vs->hnoise[i] += (1 - str[j]) * vs->h[j][i];
             }
         }
     }
@@ -352,12 +362,11 @@ static void vocoder(double p, double *mc,
             x = fxpulse + fxnoise; /* excitation is pulse plus noise */
         }
 
-#ifdef SPEED_HACK
-        /* 8KHz voices are too quiet */
-	x *= exp(vs->c[0])*2.0;
-#else
-	x *= exp(vs->c[0])*gain;
-#endif
+        if (cg_db->sample_rate == 8000)
+            /* 8KHz voices are too quiet: this is probably not general */
+            x *= exp(vs->c[0])*2.0;
+        else
+            x *= exp(vs->c[0])*gain;
 
 	x = mlsadf(x, vs->c, m, cg_db->mlsa_alpha, vs->pd, vs->d1, vs);
 
@@ -412,10 +421,11 @@ static double mlsadf1(double x, double *b, int m, double a, int pd, double *d, V
 
 static double mlsadf2 (double x, double *b, int m, double a, int pd, double *d, VocoderSetup *vs)
 {
-   double v, out = 0.0, *pt, aa;
-   register int i;
+  double v, out = 0.0, *pt;
+  //  double aa;
+  register int i;
     
-   aa = 1 - a*a;
+  //aa = 1 - a*a;
    pt = &d[pd * (m+2)];
 
    for (i=pd; i>=1; i--) {

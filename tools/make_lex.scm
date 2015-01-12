@@ -145,7 +145,7 @@ Return number as three digit octal"
 
 (define (l2C_dump_entries ifd ofdsd ofddrc ofdi)
   "(l2C_dump_entries ifd ofde)
-We dump the entries and prunciation in simple strings to ofdsd which
+We dump the entries and pronunciation in simple strings to ofdsd which
 is used for compression later, and also dump the entries to ofddrc
 with their index to ofdi in the format they will be used in.  For
 compressions sake we dump the prunciations in reverse (sharing the

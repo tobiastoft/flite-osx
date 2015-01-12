@@ -173,6 +173,7 @@ ifdef ALL_DIRS
 endif
 
 $(DEPEND): $(SRCS) $(OBJDIR)
+ifdef BUILD_DIRS
 	@ rm -f $(DEPEND)
 	@ for i in $(SRCS) ; \
 	  do \
@@ -180,13 +181,21 @@ $(DEPEND): $(SRCS) $(OBJDIR)
 	    $(MAKE_DEPEND) $$i | sed -e 's,^\([^:][^:]*\):,$(OBJDIR)/\1:,'; \
 	    echo ; \
           done > $(DEPEND)
+endif
 
 file-list:
 	@ echo making file-list in $(DIRNAME) ...
+ifeq ($(TOP),.)
+	@ for f in $(FILES) ; \
+	do \
+	   echo $$f >>$(TOP)/FileList ; \
+	done 
+else
 	@ for f in $(FILES) ; \
 	do \
 	   echo $(DIRNAME)/$$f >>$(TOP)/FileList ; \
 	done 
+endif
 ifdef ALL_DIRS
 	@ for i in $(ALL_DIRS) ; \
 	do \

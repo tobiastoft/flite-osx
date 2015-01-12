@@ -100,10 +100,10 @@ void delete_cst_regex(cst_regex *r)
 /* These define the different escape conventions for the FSF's */
 /* regexp code and Henry Spencer's */
 
-static const char *fsf_magic="^$*+?[].\\";
-static const char *fsf_magic_backslashed="()|<>";
-static const char *spencer_magic="^$*+?[].()|\\\n";
-static const char *spencer_magic_backslashed="<>";
+static const char * const fsf_magic="^$*+?[].\\";
+static const char * const fsf_magic_backslashed="()|<>";
+static const char * const spencer_magic="^$*+?[].()|\\\n";
+static const char * const spencer_magic_backslashed="<>";
 
 /* Adaptation of rjc's mapping of fsf format to henry spencer's format */
 /* of escape sequences, as taken from EST_Regex.cc in EST              */

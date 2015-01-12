@@ -108,7 +108,7 @@ typedef struct _VocoderSetup {
 static void init_vocoder(double fs, int framel, int m, 
                          VocoderSetup *vs, cst_cg_db *cg_db);
 static void vocoder(double p, double *mc, 
-                    const cst_track *str, int t,
+                    const float *str,
                     int m, cst_cg_db *cg_db,
                      VocoderSetup *vs, cst_wave *wav, long *pos);
 static double mlsadf(double x, double *b, int m, double a, int pd, double *d,

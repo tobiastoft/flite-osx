@@ -49,7 +49,7 @@
 #include "cst_hrg.h"
 
 struct cst_diphone_entry_struct {
-    char *name;
+    const char *name;
     unsigned short start_pm;
     unsigned char pb_pm;
     unsigned char end_pm;

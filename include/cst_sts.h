@@ -60,7 +60,8 @@ typedef struct cst_sts_struct cst_sts;
 /* array in separate files thus reducing the number of symbols -- but */
 /* introducing an extra dereference */
 struct cst_sts_paged_struct {
-    const unsigned short frame_offset;
+    /*    const unsigned short frame_offset; */
+    const unsigned int frame_offset;
     const unsigned short res_size;
     const unsigned int res_offset;
     const unsigned short *frame_page;  
@@ -78,12 +79,15 @@ struct cst_sts_list_struct {
     const unsigned short *frames;
     const unsigned char *residuals;
     const unsigned int *resoffs;
+    const unsigned char *ressizes;
 
     int num_sts;          /* But I don't think you need that number */
     int num_channels;     /* typically lpc order */
     int sample_rate;
     float coeff_min;      /* used for decoding the short representation */
     float coeff_range;    /* for coefficients  */ 
+
+    const char *codec;    /* encoding type for residual */
 };
 typedef struct cst_sts_list_struct cst_sts_list;
 
@@ -102,6 +106,12 @@ struct cst_lpcres_struct {
 
     /* Optional call back function */
     cst_audio_streaming_info *asi;
+
+    /* Expensive decoding can be delayed until resynthesis, hence */
+    /* streaming will be more useful as the decoding will happen */
+    /* during playback time */
+    const unsigned char **packed_residuals;
+    int delayed_decoding;  /* 1 if decoding happens at streaming time */
 };
 typedef struct cst_lpcres_struct cst_lpcres;
 

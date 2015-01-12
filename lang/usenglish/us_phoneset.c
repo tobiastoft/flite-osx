@@ -253,5 +253,6 @@ const cst_phoneset us_phoneset = {
   us_phonenames,
   "pau",
   50,
-  us_fvtable
+  us_fvtable,
+  0  /* not freeable */
 };

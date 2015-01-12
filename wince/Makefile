@@ -66,14 +66,14 @@ flite_LIBS_flags = -L$(LIBDIR) $(flite_LIBS:%=-l%)
 flite_LIBS_deps = $(flite_LIBS:%=$(LIBDIR)/lib%.a)
 
 # If you only want one voice, it should be kal -- its fast and small enough
-#voice_LIBS_flags = -lflite_cmu_us_kal 
-#EXTRA_CC_FLAGS = -Dcmu_us_kal
+voice_LIBS_flags = -lflite_cmu_us_kal 
+EXTRA_CC_FLAGS = -Dcmu_us_kal
 
 # OR you can try these specially built voices for WM
 # Special 8KH, reduced order (13) voices, seem to be fast enough
 # for 400MHz ARM (Tytn II)
-voice_LIBS_flags = -Lvoices -lcmu_us_kal -lcmu_us_awb -lcmu_us_rms -lcmu_us_slt
-EXTRA_CC_FLAGS = -Dcmu_us_kal -Dcmu_us_awb -Dcmu_us_rms -Dcmu_us_slt
+#voice_LIBS_flags = -Lvoices -lcmu_us_kal -lcmu_us_awb -lcmu_us_rms -lcmu_us_slt
+#EXTRA_CC_FLAGS = -Dcmu_us_kal -Dcmu_us_awb -Dcmu_us_rms -Dcmu_us_slt
 
 wince_LIBS = -lcommctrl -laygshell
 EXTRA_CC_FLAGS += -D_WIN32_IE=0x0500

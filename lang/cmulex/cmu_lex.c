@@ -95,8 +95,10 @@ static const char * const addenda35[] = { "n/","s","l","ae1","sh",NULL};
 
 static const char * const addenda36[] = { "nin","ih","n",NULL};
 static const char * const addenda37[] = { "nto","t","ax",NULL};
-static const char * const addenda38[] = { "n_a","ey",NULL};
+static const char * const addenda38[] = { "0_a","ey",NULL};
 static const char * const addenda39[] = { "vhavent","hh","ae1","v","ax","n","t",NULL};
+static const char * const addenda40[] = { "nemail","iy1","m","ey1","l",NULL};
+static const char * const addenda41[] = { "nshit","sh","ih1","t",NULL};
 
 static const char * const * const addenda[] = {
     addenda0,
@@ -140,6 +142,8 @@ static const char * const * const addenda[] = {
     addenda37,
     addenda38,
     addenda39,
+    addenda40,
+    addenda41,
     NULL };
 
 static int cmu_is_silence(const char *p)
@@ -331,6 +335,12 @@ extern const char * const cmu_lts_letter_table[];
 extern const cst_lts_addr cmu_lts_letter_index[];
 extern const cst_lts_model cmu_lts_model[];
 
+cst_lexicon *cmulex_init()
+{
+    /* We actually need the init function match the directory name */
+    return cmu_lex_init();
+}
+
 cst_lexicon *cmu_lex_init()
 {
     /* I'd like to do this as a const but it needs everything in this */
@@ -356,7 +366,8 @@ cst_lexicon *cmu_lex_init()
 #ifdef CST_NO_STATIC_LEX
     /* cmu_lex.data will be set elsewhere */
 #else
-    cmu_lex.data = cmu_lex_data;
+    /* as the data is const, we cast it through void * */
+    cmu_lex.data = (unsigned char *)(void *)cmu_lex_data;
 #endif
     cmu_lex.num_bytes = cmu_lex_num_bytes;
     cmu_lex.phone_table = (char **) cmu_lex_phone_table;

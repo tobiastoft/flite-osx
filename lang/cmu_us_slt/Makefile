@@ -37,11 +37,14 @@ BUILD_DIRS =
 ALL_DIRS= 
 H = voxdefs.h cmu_us_$(VOXNAME)_cg_durmodel.h \
     cmu_us_$(VOXNAME)_cg_single_mcep_trees.h \
-    cmu_us_$(VOXNAME)_cg_f0_trees.h
+    cmu_us_$(VOXNAME)_cg_f0_trees.h \
+    cmu_us_$(VOXNAME)_spamf0_accent.h \
+    cmu_us_$(VOXNAME)_spamf0_phrase.h
 SRCS = cmu_us_$(VOXNAME).c cmu_us_$(VOXNAME)_cg_single_mcep_trees.c \
        cmu_us_$(VOXNAME)_cg.c cmu_us_$(VOXNAME)_cg_single_params.c \
        cmu_us_$(VOXNAME)_cg_durmodel.c cmu_us_$(VOXNAME)_cg_phonestate.c \
-       cmu_us_$(VOXNAME)_cg_f0_trees.c
+       cmu_us_$(VOXNAME)_cg_f0_trees.c cmu_us_$(VOXNAME)_spamf0_accent.c \
+       cmu_us_$(VOXNAME)_spamf0_phrase.c cmu_us_$(VOXNAME)_spamf0_accent_params.c
 OBJS = $(SRCS:.c=.o)
 
 FILES = Makefile $(SCM) $(SRCS) $(H)

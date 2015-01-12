@@ -51,9 +51,17 @@ cst_filemap *cst_mmap_file(const char *path)
 	HANDLE ffm;
 	cst_filemap *fmap = NULL;
 
-	ffm = CreateFile(path,GENERIC_READ,FILE_SHARE_READ,NULL,
+	/* By default, CreateFile uses wide-char strings; this doesn't do the expected 
+	   thing when passed non-wide strings
+	   
+	   We're explicitly using the non-wide version of CreateFile to
+	   sidestep this issue.  If you're having problems with unicode
+	   pathnames, you'll need to change this to call CreateFileW (and
+	   then ensure you're always passing a wide-char string). */
+
+	ffm = CreateFileA(path,GENERIC_READ,FILE_SHARE_READ,NULL,
 			 OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
-	if (ffm == INVALID_HANDLE_VALUE) {
+	if (ffm == INVALID_HANDLE_VALUE) { 
 		return NULL;
 	} else {
 		fmap = cst_alloc(cst_filemap,1);

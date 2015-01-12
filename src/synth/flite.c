@@ -40,11 +40,16 @@
 
 #include "cst_tokenstream.h"
 #include "flite.h"
+#include "cst_alloc.h"
+#include "cst_clunits.h"
+#include "cst_cg.h"
 
 /* This is a global, which isn't ideal, this may change */
 /* It is set when flite_set_voice_list() is called which happens in */
 /* flite_main() */
 cst_val *flite_voice_list = 0;
+cst_lang flite_lang_list[20];
+int flite_lang_list_length = 0;
 
 int flite_init()
 {
@@ -52,6 +57,64 @@ int flite_init()
 
     return 0;
 }
+
+int flite_voice_dump(cst_voice *voice, const char *filename)
+{
+    return cst_cg_dump_voice(voice,filename);
+}
+
+cst_voice *flite_voice_load(const char *filename)
+{
+    /* Currently only supported for CG voices */
+    /* filename make be a local pathname or a url (http:/file:) */
+    cst_voice *v = NULL;
+
+    v = cst_cg_load_voice(filename,flite_lang_list);
+
+    return v;
+}
+
+int flite_add_voice(cst_voice *voice)
+{
+    const cst_val *x;
+    if (voice)
+    {
+        /* add to second place -- first is default voice */
+        /* This is thread unsafe */
+        if (flite_voice_list)
+        {   /* Other voices -- first is default, add this second */
+            x = cons_val(voice_val(voice),
+                         val_cdr(flite_voice_list));
+            set_cdr((cst_val *)(void *)flite_voice_list,x);
+        }
+        else
+        {   /* Only voice so goes on front */
+            flite_voice_list = cons_val(voice_val(voice),flite_voice_list);
+        }
+        
+        return TRUE;
+    }
+    else
+        return FALSE;
+
+}
+
+int flite_add_lang(const char *langname,
+                   void (*lang_init)(cst_voice *vox),
+                   cst_lexicon *(*lex_init)())
+{
+    if (flite_lang_list_length < 19)
+    {
+        flite_lang_list[flite_lang_list_length].lang = langname;
+        flite_lang_list[flite_lang_list_length].lang_init = lang_init;
+        flite_lang_list[flite_lang_list_length].lex_init = lex_init;
+        flite_lang_list_length++;
+        flite_lang_list[flite_lang_list_length].lang = NULL;
+    }
+
+    return TRUE;
+}
+
 
 cst_voice *flite_voice_select(const char *name)
 {
@@ -66,8 +129,23 @@ cst_voice *flite_voice_select(const char *name)
     for (v=flite_voice_list; v; v=val_cdr(v))
     {
         voice = val_voice(val_car(v));
-        if (cst_streq(name,voice->name))
+        if (cst_streq(name,voice->name))  /* short name */
             return voice;
+        if (cst_streq(name,get_param_string(voice->features,"name","")))
+            /* longer name */
+            return voice;
+        if (cst_streq(name,get_param_string(voice->features,"pathname","")))
+            /* even longer name (url) */
+            return voice;
+    }
+
+    if (cst_urlp(name) || /* naive check if its a url */
+        cst_strchr(name,'/'))
+    {
+        voice = flite_voice_load(name);
+        if (!voice)
+            cst_errmsg("Error load voice: failed to load voice from %s\n",name);        flite_add_voice(voice);
+        return voice;
     }
 
     return flite_voice_select(NULL);
@@ -149,17 +227,7 @@ float flite_file_to_speech(const char *filename,
 			   cst_voice *voice,
 			   const char *outtype)
 {
-    cst_utterance *utt;
     cst_tokenstream *ts;
-    const char *token;
-    cst_item *t;
-    cst_relation *tokrel;
-    float durs = 0;
-    int num_tokens;
-    cst_wave *w;
-    cst_breakfunc breakfunc = default_utt_break;
-    cst_uttfunc utt_user_callback = 0;
-    int fp;
 
     if ((ts = ts_open(filename,
 	      get_param_string(voice->features,"text_whitespace",NULL),
@@ -172,10 +240,28 @@ float flite_file_to_speech(const char *filename,
 		   filename);
 	return 1;
     }
+    return flite_ts_to_speech(ts,voice,outtype);
+}
+
+
+float flite_ts_to_speech(cst_tokenstream *ts,
+                         cst_voice *voice,
+                         const char *outtype)
+{
+    cst_utterance *utt;
+    const char *token;
+    cst_item *t;
+    cst_relation *tokrel;
+    float durs = 0;
+    int num_tokens;
+    cst_wave *w;
+    cst_breakfunc breakfunc = default_utt_break;
+    cst_uttfunc utt_user_callback = 0;
+    int fp;
+
     fp = get_param_int(voice->features,"file_start_position",0);
     if (fp > 0)
         ts_set_stream_pos(ts,fp);
-
     if (feat_present(voice->features,"utt_break"))
 	breakfunc = val_breakfunc(feat_val(voice->features,"utt_break"));
 
@@ -213,6 +299,11 @@ float flite_file_to_speech(const char *filename,
             if (utt)
             {
                 utt = flite_do_synth(utt,voice,utt_synth_tokens);
+                if (feat_present(utt->features,"Interrupted"))
+                {
+                    delete_utterance(utt); utt = NULL;
+                    break;
+                }
                 durs += flite_process_output(utt,outtype,TRUE);
                 delete_utterance(utt); utt = NULL;
             }
@@ -240,8 +331,7 @@ float flite_file_to_speech(const char *filename,
                                    cst_strlen(ts->postpunctuation)));
 	item_set_int(t,"line_number",ts->line_number);
     }
-
-    delete_utterance(utt);
+    if (utt) delete_utterance(utt);
     ts_close(ts);
     return durs;
 }
@@ -338,17 +428,15 @@ void flite_feat_set(cst_features *f, const char *name,const cst_val *v)
 {
     feat_set(f,name,v);
 }
-
 int flite_feat_remove(cst_features *f, const char *name)
 {
-	return feat_remove(f,name);
+    return feat_remove(f,name);
 }
 
 const char *flite_ffeature_string(const cst_item *item,const char *featpath)
 {
     return ffeature_string(item,featpath);
 }
-
 int flite_ffeature_int(const cst_item *item,const char *featpath)
 {
     return ffeature_int(item,featpath);
@@ -361,8 +449,95 @@ const cst_val *flite_ffeature(const cst_item *item,const char *featpath)
 {
     return ffeature(item,featpath);
 }
+
 cst_item* flite_path_to_item(const cst_item *item,const char *featpath)
 {
     return path_to_item(item,featpath);
+}
+
+int flite_mmap_clunit_voxdata(const char *voxdir, cst_voice *voice)
+{   
+    /* Map clunit_db in voice data for giveb voice */
+    char *path;
+    const char *name;
+    const char *x;
+    int *indexes;
+    cst_filemap *vd;
+    cst_clunit_db *clunit_db;
+    int i;
+
+    name = get_param_string(voice->features,"name","voice");
+    path = cst_alloc(char,cst_strlen(voxdir)+1+cst_strlen(name)+1+cst_strlen("voxdata")+1);
+    cst_sprintf(path,"%s/%s.voxdata",voxdir,name);
+
+    vd = cst_mmap_file(path);
+    
+    flite_feat_set_string(voice->features,"voxdir",path);
+    cst_free(path);
+
+    if (vd == NULL)
+        return -1;
+
+    x = (const char *)vd->mem;
+    if (!cst_streq("CMUFLITE",x))
+    {   /* Not a Flite voice data file */
+        cst_munmap_file(vd);
+        return -1;
+    }
+
+    for (i=9; x[i] &&i<64; i++)
+        if (x[i] != ' ')
+            break;
+
+    if (!cst_streq(name,&x[i]))
+    {   /* Not a voice data file for this voice */
+        cst_munmap_file(vd);
+        return -1;
+    }
+
+    /* This uses a hack to put in a void pointer to the cst_filemap */
+    flite_feat_set(voice->features,"voxdata",userdata_val(vd));
+    indexes = (int *)&x[64];
+    
+    clunit_db = val_clunit_db(feat_val(voice->features,"clunit_db"));
+
+    clunit_db->sts->resoffs = 
+        (const unsigned int *)&x[64+20];
+    clunit_db->sts->frames = 
+        (const unsigned short *)&x[64+20+indexes[0]];
+    clunit_db->mcep->frames = 
+        (const unsigned short *)&x[64+20+indexes[0]+indexes[1]];
+    clunit_db->sts->residuals = 
+        (const unsigned char *)&x[64+20+indexes[0]+indexes[1]+indexes[2]];
+    clunit_db->sts->ressizes = 
+        (const unsigned char *)&x[64+20+indexes[0]+indexes[1]+indexes[2]+indexes[3]];
+    
+    return 0;
+}
+
+int flite_munmap_clunit_voxdata(cst_voice *voice)
+{
+
+    cst_filemap *vd;
+    const cst_val *val_vd;
+    const cst_val *val_clunit_database;
+    cst_clunit_db *clunit_db;
+
+    val_vd = flite_get_param_val(voice->features,"voxdata",NULL);
+    val_clunit_database = flite_get_param_val(voice->features,"clunit_db",NULL);
+
+    if (val_vd && val_clunit_database)
+    {    
+        clunit_db = val_clunit_db(val_clunit_database);
+        clunit_db->sts->resoffs = NULL;
+        clunit_db->sts->frames = NULL;
+        clunit_db->mcep->frames = NULL;
+        clunit_db->sts->residuals = NULL;
+        clunit_db->sts->ressizes = NULL;
+        vd = (cst_filemap *)val_userdata(val_vd);
+        cst_munmap_file(vd);
+    }
+    
+    return 0;
 }
 

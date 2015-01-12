@@ -84,6 +84,8 @@ INSTALL_HEADERS = $(H)
 
 ALL = flite_version.h
 
+LOCAL_CLEAN = flite_version.h
+
 include $(TOP)/config/common_make_rules
 
 flite_version.h: $(TOP)/config/project.mak

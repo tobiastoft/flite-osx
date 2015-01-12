@@ -38,6 +38,7 @@
 ;;;                                                                     ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defvar val_table_length 0)
 
 (define (carttoC name tree odir)
   "(carttoC NAME TREE ODIR)
@@ -125,41 +126,57 @@ want multiple trees in the same file."
       (carttoC_feat_num f)))))
 
 (define (carttoC_val_table ofdh f operator)
-  (let ((fn (assoc_string
-	     (if (string-equal operator "is")
-		 (format nil "is_%s" f)
-		 f)
-	     val_table)))
+  (let ((fn (if (number? f)
+                nil  ;; if its a number don't try to share it
+                (assoc_string
+                 (if (string-equal operator "is")
+                     (format nil "is_%s" f)
+                     f)
+                 val_table))))
+    (if (null val_table)
+        (begin
+          (set! val_table_length 0)
+          (set! val_table (cons (list "_xxx" "_xxx" nil)))))
     (cond
      (fn
+;      (format t "awb_debug reused_val %l\n" fn)
       (cadr fn))
      (t
-      (let ((nname (format nil "val_%04d" (length val_table))))
+      (let ((nname (format nil "val_%04d" val_table_length)))
+        (set! val_table_length (+ 1 val_table_length))
+        (set! val_table_key
+              (if (string-equal operator "is")
+                  (format nil "is_%s" f)
+                  f))
 ;	(format ofdh "static const cst_val %s;\n" nname)
-	(set! val_table
-	      (cons (list 
-		     (if (string-equal operator "is")
-			 (format nil "is_%s" f)
-			 f)
-		     nname
-		     (cond
-		      ((string-equal operator "is")
-		       (format ofdh "DEF_STATIC_CONST_VAL_STRING(%s,\"%s\");\n"
-			       nname f))
-		      ((string-equal "matches" operator)
-		       (format ofdh "DEF_STATIC_CONST_VAL_INT(%s,CST_RX_%s_NUM);\n"
-			       nname f))
-		      ((number? f)
-		       (format ofdh "DEF_STATIC_CONST_VAL_FLOAT(%s,%f);\n"
-			       nname f))
-		      ((consp f)
-		       (format stderr "list vals not supported here yet\n")
-		       (error f))
-		      (t
-		       (format ofdh "DEF_STATIC_CONST_VAL_STRING(%s,\"%s\");\n"
-			       nname f))))
-		    val_table))
-        (cadr (car val_table)))))))
+        (cond
+         ((string-equal operator "is")
+          (set! val_table
+                (cons (list val_table_key nname
+          (format ofdh "DEF_STATIC_CONST_VAL_STRING(%s,\"%s\");\n"
+                  nname f))
+                      val_table)))
+         ((string-equal "matches" operator)
+          (set! val_table
+                (cons (list val_table_key nname
+          (format ofdh "DEF_STATIC_CONST_VAL_INT(%s,CST_RX_%s_NUM);\n"
+                  nname f))
+                      val_table)))
+         ((number? f)
+          (format ofdh "DEF_STATIC_CONST_VAL_FLOAT(%s,%f);\n"
+                  nname f))
+         ((consp f)
+          (format stderr "list vals not supported here yet\n")
+          (error f))
+         (t
+          (set! val_table
+                (cons (list val_table_key nname
+          (format ofdh "DEF_STATIC_CONST_VAL_STRING(%s,\"%s\");\n"
+                  nname f))
+                      val_table))))
+;        (format t "awb_debug new_val %l\n" (car val_table))
+        nname
+        )))))
 
 (define (carttoC_tree_nodes tree ofdc ofdh)
   "(carttoC_tree_nodes tree ofdc ofdh)

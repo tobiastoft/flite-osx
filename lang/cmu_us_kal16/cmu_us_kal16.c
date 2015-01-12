@@ -31,19 +31,19 @@
 /*                                                                       */
 /*************************************************************************/
 /*             Author:  Alan W Black (awb@cs.cmu.edu)                    */
-/*               Date:  December 2000                                    */
+/*               Date:  April 2001                                       */
 /*************************************************************************/
 /*                                                                       */
-/*  A simple voice defintion                                             */
+/*  A simple diphone voice defintion			                 */
 /*                                                                       */
 /*************************************************************************/
 
+#include <string.h>
 #include "flite.h"
 #include "cst_diphone.h"
 #include "usenglish.h"
 #include "cmu_lex.h"
 
-static cst_utterance *cmu_us_kal16_postlex(cst_utterance *u);
 extern cst_diphone_db cmu_us_kal16_db;
 
 cst_voice *cmu_us_kal16_diphone = NULL;
@@ -59,60 +59,39 @@ cst_voice *register_cmu_us_kal16(const char *voxdir)
     v = new_voice();
     v->name = "kal16";
 
+    /* Sets up language specific parameters in the cmu_us_kal16. */
     usenglish_init(v);
 
-    /* Set up basic values for synthesizing with this voice */
-    flite_feat_set_string(v->features,"name","cmu_us_kal_diphone16");
+    feat_set_string(v->features,"name","cmu_us_kal16");
+
+    feat_set_float(v->features,"int_f0_target_mean",95.0);
+    feat_set_float(v->features,"int_f0_target_stddev",11.0);
+
+    feat_set_float(v->features,"duration_stretch",1.1); 
 
     /* Lexicon */
     lex = cmu_lex_init();
-    flite_feat_set(v->features,"lexicon",lexicon_val(lex));
+    feat_set(v->features,"lexicon",lexicon_val(lex));
+    feat_set(v->features,"postlex_func",uttfunc_val(lex->postlex));
 
-    /* Intonation */
-    flite_feat_set_float(v->features,"int_f0_target_mean",105.0);
-    flite_feat_set_float(v->features,"int_f0_target_stddev",14.0);
-
-    /* Post lexical rules */
-    flite_feat_set(v->features,"postlex_func",uttfunc_val(&cmu_us_kal16_postlex));
-
-    /* Duration */
-    flite_feat_set_float(v->features,"duration_stretch",1.1);
-
-    /* Waveform synthesis: diphone_synth */
-    flite_feat_set(v->features,"wave_synth_func",uttfunc_val(&diphone_synth));
-    flite_feat_set(v->features,"diphone_db",diphone_db_val(&cmu_us_kal16_db));
-    flite_feat_set_int(v->features,"sample_rate",cmu_us_kal16_db.sts->sample_rate);
-    flite_feat_set_string(v->features,"resynth_type","fixed");
-    flite_feat_set_string(v->features,"join_type","modified_lpc");
+    /* Waveform synthesis */
+    feat_set(v->features,"wave_synth_func",uttfunc_val(&diphone_synth));
+    feat_set(v->features,"diphone_db",diphone_db_val(&cmu_us_kal16_db));
+    feat_set_int(v->features,"sample_rate",cmu_us_kal16_db.sts->sample_rate);
+/*    feat_set_string(v->features,"join_type","simple_join"); */
+    feat_set_string(v->features,"join_type","modified_lpc");
+    feat_set_string(v->features,"resynth_type","fixed");
 
     cmu_us_kal16_diphone = v;
 
     return cmu_us_kal16_diphone;
 }
 
-void unregister_cmu_us_kal16(cst_voice *v)
+void unregister_cmu_us_kal16(cst_voice *vox)
 {
-    if (v != cmu_us_kal16_diphone)
+    if (vox != cmu_us_kal16_diphone)
 	return;
-    delete_voice(v);
+    delete_voice(vox);
     cmu_us_kal16_diphone = NULL;
 }
 
-static void fix_ah(cst_utterance *u)
-{
-    /* This should really be done in the index itself */
-    const cst_item *s;
-
-    for (s=relation_head(utt_relation(u,"Segment")); s; s=item_next(s))
-	if (cst_streq(item_feat_string(s,"name"),"ah"))
-	    item_set_string(s,"name","aa");
-}
-
-static cst_utterance *cmu_us_kal16_postlex(cst_utterance *u)
-{
-
-    cmu_postlex(u);
-    fix_ah(u);
-
-    return u;
-}

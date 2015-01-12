@@ -58,16 +58,14 @@ ifeq ($(VOICETYPE),cg)
 ## Clustergen
 CSRCS += $(VOICENAME)_cg.c
 CSRCS += $(VOICENAME)_cg_f0_trees.c 
-CSRCS += $(VOICENAME)_cg_durmodel.c
 CSRCS += $(VOICENAME)_cg_phonestate.c
-# Identify which .c param files are used (static+delta/single)
+# Identify which .c param files are used single or multi-rfs
 include paramfiles.mak
-ifeq ($(PARAMMODEL),multimodel)
-CSRCS += $(VOICENAME)_cg_static_mcep_trees.c $(VOICENAME)_cg_static_params.c
-CSRCS += $(VOICENAME)_cg_delta_mcep_trees.c $(VOICENAME)_cg_delta_params.c
-else
-# Single model
-CSRCS += $(VOICENAME)_cg_single_mcep_trees.c $(VOICENAME)_cg_single_params.c
+CSRCS += $(shell ls $(VOICENAME)_cg_*_mcep_trees.c)
+CSRCS += $(shell ls $(VOICENAME)_cg_*_params.c)
+CSRCS += $(shell ls $(VOICENAME)_cg_*_durmodel.c)
+ifeq ($(SPAMF0),true)
+CSRCS += $(VOICENAME)_spamf0_phrase.c $(VOICENAME)_spamf0_accent.c $(VOICENAME)_spamf0_accent_params.c
 endif
 MCEPOBJS =
 LPCOBJS =
@@ -76,18 +74,18 @@ else
 CSRCS += $(VOICENAME)_clunits.c
 CSRCS += $(VOICENAME)_cltrees.c $(VOICENAME)_lpc.c $(VOICENAME)_mcep.c
 CSRCS += $(VOICENAME)_cl_durmodel.c
-MCEPSRCS = $(shell ls $(VOICENAME)_mcep_*.c)
+MCEPSRCS = $(shell if [ -f $(VOICENAME)_mcep_000.c ]; then ls $(VOICENAME)_mcep_*.c ; fi)
 MCEPOBJS = $(MCEPSRCS:.c=.o)
-LPCSRCS= $(shell ls $(VOICENAME)_lpc_*.c)
+LPCSRCS= $(shell if [ -f $(VOICENAME)_lpc_000.c ] ; then ls $(VOICENAME)_lpc_*.c; fi )
 LPCOBJS = $(LPCSRCS:.c=.o)
-RESSRCS= $(shell ls $(VOICENAME)_res_*.c)
+RESSRCS= $(shell if [ -f $(VOICENAME)_res_000.c ] ; then ls $(VOICENAME)_res_*.c; fi )
 RESOBJS = $(RESSRCS:.c=.o)
 endif
 endif
 
 OBJS = $(CSRCS:.c=.o) $(LPCOBJS) $(MCEPOBJS) $(RESOBJS) 
 
-ALL = .build_lib flite_$(VOICENAME)
+ALL = lib$(VOICENAME).a flite_$(VOICENAME)
 
 include $(FLITEDIR)/config/common_make_rules
 
@@ -97,20 +95,26 @@ ALL += lib$(VOICENAME).so
 endif
 
 $(VOICENAME)_lpc.o: $(VOICENAME)_lpc.c
-	$(CC) -I. -I$(FLITEDIR)/include -c -o $@ $<
+	$(CC) $(CFLAGS) -I. -I$(FLITEDIR)/include -c -o $@ $<
 
 $(VOICENAME)_mcep.o: $(VOICENAME)_mcep.c
-	$(CC) -I. -I$(FLITEDIR)/include -c -o $@ $<
+	$(CC) $(CFLAGS) -I. -I$(FLITEDIR)/include -c -o $@ $<
 
-flite_$(VOICENAME): flite_main.o flite_voice_list.o $(FLITELIBS) lib$(VOICENAME).a
-	$(CC) $(CFLAGS) -o $@ flite_main.o flite_voice_list.o $(LOCAL_LIBS)  $(LOCAL_LANGLEX_LIBS) $(FLITELIBFLAGS) $(LDFLAGS)
+flite_$(VOICENAME): flite_main.o flite_voice_list.o flite_lang_list.o $(FLITELIBS) lib$(VOICENAME).a
+	$(CC) $(CFLAGS) -o $@ flite_main.o flite_voice_list.o flite_lang_list.o $(LOCAL_LIBS)  $(LOCAL_LANGLEX_LIBS) $(FLITELIBFLAGS) $(LDFLAGS)
 
-.build_lib: $(OBJS)
-	@ $(AR) cruv $(LIBDIR)/lib$(VOICENAME).a $(OBJS)
-	@ $(RANLIB) $(LIBDIR)/lib$(VOICENAME).a
+lib$(VOICENAME).a: $(OBJS)
+	@ $(AR) cruv lib$(VOICENAME).a $(OBJS)
+	@ $(RANLIB) lib$(VOICENAME).a
 	@ touch .build_lib
 
 flite_voice_list.c:
 	$(TOP)/tools/make_voice_list $(VOICES)
 
+flite_lang_list.c:
+	$(TOP)/tools/make_lang_list $(FLITE_LANG) $(FLITE_LEX)
+
+# Dump cg voice as single file
+voicedump : flite_$(VOICENAME)
+	./flite_$(VOICENAME) -voicedump $(VOICENAME).flitevox
 

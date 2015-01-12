@@ -43,14 +43,31 @@
 
 CST_VAL_REGISTER_TYPE_NODEL(cart,cst_cart)
 
-/* Make this 1 if you want to debug som cart calls */
+/* Make this 1 if you want to debug some cart calls */
 #define CART_DEBUG 0
 
 #define cst_cart_node_n(P,TREE) ((TREE)->rule_table[P])
 
 void delete_cart(cst_cart *cart)
 {
-    cst_errmsg("delete_cart function missing\n");
+    /* have to compensate for previous over-zealous consting */
+    /* It is assume that given carts, can be freed (i.e. they aren't in */
+    /* in the data segment */
+    int i;
+
+    if (cart == NULL)
+        return;
+
+    for (i=0; cart->rule_table[i].val; i++)
+        delete_val((cst_val *)(void *)cart->rule_table[i].val);
+    cst_free((void *)cart->rule_table);
+
+    for (i=0; cart->feat_table[i]; i++)
+        cst_free((void *)cart->feat_table[i]);
+    cst_free((void *)cart->feat_table);
+
+    cst_free(cart);
+
     return;
 }
 
@@ -112,7 +129,10 @@ const cst_val *cart_interpret(cst_item *item, const cst_cart *tree)
 #endif
 	tree_val = cst_cart_node_val(node,tree);
 	if (cst_cart_node_op(node,tree) == CST_CART_OP_IS)
+        {
+            /* printf("awb_debug %d %d\n",CST_VAL_TYPE(v),CST_VAL_TYPE(tree_val));*/
 	    r = val_equal(v,tree_val);
+        }
 	else if (cst_cart_node_op(node,tree) == CST_CART_OP_LESS)
 	    r = val_less(v,tree_val);
 	else if (cst_cart_node_op(node,tree) == CST_CART_OP_GREATER)

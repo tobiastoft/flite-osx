@@ -46,6 +46,9 @@
 (defvar mcep_min -5.404620)
 (defvar mcep_max 4.540220)
 
+(defvar page_size 500) ;; number of frames per page
+;;(set! page_size 1000000) ;; 1^6 means we do mmap
+
 (define (clunits_convert name clcatfnfileordered clcatfnunitordered 
 			 cltreesfn festvoxdir odir)
   "(clunits_convert name clcatfn clcatfnordered cltreesfn festvoxdir odir)
@@ -119,13 +122,25 @@ Convert a festvox clunits (processed) voice into a C file."
        "_")))))
 
 (define (sort_clentries entries clcatfnunitorder)
-  (let ((neworder nil))
+  (let ((neworder nil) (unittype nil) (q nil))
     (mapcar
      (lambda (unit)
-       (set! neworder 
-             (cons (assoc (car unit) entries)
-                   neworder)))
+       (set! unittype (string-before (car unit) "_"))
+       (set! q (assoc_string unittype entries))
+       ;; only keep this unit if there is an actually tree --
+       ;; in build3 (or other methods) it might have been pruned
+       (if q
+           (begin
+             (set! nnentry (assoc_string
+                            (car unit)
+                            (cdr (assoc_string unittype entries))))
+;       (format t "%s %l %l\n" unittype nnentry (assoc_string unittype entries))
+             (set! neworder 
+                   (cons 
+                    nnentry
+                    neworder)))))
      (load clcatfnunitorder t))
+    (format t "new order %d\n" (length neworder))
     (reverse neworder))
   )
 
@@ -159,7 +174,8 @@ compilable single C file."
     (set! pm_pos 0)
     (set! sample_pos 0)
     (set! times nil)
-    (set! clunits_entries nil)
+;    (set! clunits_entries nil)
+    (set! t_entries nil)
     (set! done_files nil)
     (set! num_unit_entries (length clindex))
     (set! residual_sizes nil)
@@ -167,22 +183,24 @@ compilable single C file."
     (set! lpc_info nil)
     (set! mcep_info nil)
 
-    (set! n 500)
+    (set! n page_size)
     (set! f 0)
     (while clindex
-     (if (equal? n 500)
+     (if (equal? n page_size)
 	 (begin
 	   (if (> f 0)
 	       (begin 
-                 (format lofdbitlpc "0};\n\n")
+                 (format lofdbitlpc " 0\n};\n\n")
                  (fclose lofdbitlpc) 
-                 (format lofdbitres "0};\n\n")
+                 (format lofdbitres " 0\n};\n\n")
                  (fclose lofdbitres) 
-                 (format mofdbitmcep "0};\n\n")
+                 (format mofdbitmcep " 0\n};\n\n")
                  (fclose mofdbitmcep)
                  ))
 	   (set! lofdbitlpc
-		 (fopen (format nil "%s/%s_lpc_%03d.c" odir name f) "w"))
+                 (if (equal? page_size 1000000)
+                     (fopen (format nil "%s/%s_lpcall.c" odir name) "w")
+                     (fopen (format nil "%s/%s_lpc_%03d.c" odir name f) "w")))
            
            (format lofdbitlpc 
                    "const unsigned short %s_sts_lpc_page_%d[] = { \n" 
@@ -191,7 +209,9 @@ compilable single C file."
                    name f )
 
 	   (set! lofdbitres
-		 (fopen (format nil "%s/%s_res_%03d.c" odir name f) "w"))
+                 (if (equal? page_size 1000000)
+                     (fopen (format nil "%s/%s_resall.c" odir name) "w")
+                     (fopen (format nil "%s/%s_res_%03d.c" odir name f) "w")))
            (format lofdbitres 
                    "const unsigned char %s_sts_res_page_%d[] = { \n" 
                    name f )
@@ -199,7 +219,9 @@ compilable single C file."
                    name f )
 
 	   (set! mofdbitmcep 
-		 (fopen (format nil "%s/%s_mcep_%03d.c" odir name f) "w"))
+                 (if (equal? page_size 1000000)
+                     (fopen (format nil "%s/%s_mcepall.c" odir name) "w")
+                     (fopen (format nil "%s/%s_mcep_%03d.c" odir name f) "w")))
            (format mofdbitmcep
                    "const unsigned short %s_sts_mcep_page_%d[] = {\n" 
                    name f )
@@ -224,73 +246,158 @@ compilable single C file."
 		))
 
      ;; Output unit_entry for this unit
-     (set! clunits_entries
-	   (cons
-	    (list 
+     (set! entry 
+           (list 
 	     (nth 0 (car clindex))
 	     (nth 2 pms) ; start_pm
 	     (nth 3 pms) ; phone_boundary_pm
 	     (nth 4 pms) ; end_pm
 	     (nth 5 (car clindex))
 	     (nth 6 (car clindex))
-	     )
-	    clunits_entries))
+	     ))
+     (set! q_entries (assoc_string (string-before (car entry) "_") t_entries))
+     (if q_entries
+         (set-cdr! q_entries (cons entry (cdr q_entries)))
+         (set! t_entries 
+               (cons 
+                (list 
+                 (string-before (car entry) "_") 
+                 entry)
+                t_entries)))
+;     (set! clunits_entries
+;	   (cons
+;	    (list 
+;	     (nth 0 (car clindex))
+;	     (nth 2 pms) ; start_pm
+;	     (nth 3 pms) ; phone_boundary_pm
+;	     (nth 4 pms) ; end_pm
+;	     (nth 5 (car clindex))
+;	     (nth 6 (car clindex))
+;	     )
+;	    clunits_entries))
      (set! clindex (cdr clindex)))
 
-    (set! clunits_entries (sort_clentries clunits_entries clcatfnunitordered))
-
+    (format t "Sorting cl entries\n")
+;    (format t "%l\n" (caar t_entries))
+;    (format t "%l\n" (car t_entries))
+    (set! clunits_entries 
+          (sort_clentries t_entries clcatfnunitordered))
+    (format t "End Sorting cl entries %d %d\n"
+            (length clunits_entries)
+            (length clcatfnunitordered)
+            )
     (format lofdidx "\n\n")
     (format mofdidx "\n\n")
 
     (begin ;; Close of last pages
-      (format lofdbitlpc "0};\n\n")
+      (format lofdbitlpc " 0\n};\n\n")
       (fclose lofdbitlpc) 
-      (format lofdbitres "0};\n\n")
+      (format lofdbitres " 0\n};\n\n")
       (fclose lofdbitres) 
-      (format mofdbitmcep "0};\n\n")
+      (format mofdbitmcep " 0\n};\n\n")
       (fclose mofdbitmcep)
       )
 
-    (format lofdidx "const cst_sts_paged %s_sts_paged_vals[] = { \n" name)
-    (set! i 0)
-    (mapcar
-     (lambda (info)
-       (format lofdidx "  {%d,%d,%d,%s_sts_lpc_page_%d,%s_sts_res_page_%d},\n"
-               (nth 1 info) (nth 2 info) (nth 3 info)
-               name (nth 0 info)
-               name (nth 0 info))
-       (set! i (+ 1 i)))
-     (reverse lpc_info))
-    (format lofdidx "   { 0, 0, 0, 0, 0 }};\n\n")
-    (format lofdidx "const cst_sts_list %s_sts = {\n" name)
-    (format lofdidx "  NULL, %s_sts_paged_vals,\n" name)
-    (format lofdidx "  NULL, NULL, NULL,\n")
-    (format lofdidx "  %d,\n" i)
-    (format lofdidx "  %d,\n" lpc_order)
-    (format lofdidx "  %d,\n" sample_rate)
-    (format lofdidx "  %f,\n" lpc_min)
-    (format lofdidx "  %f\n" lpc_range)
+    (if (equal? page_size 1000000)
+        (begin ;; mmap 
+          (set! resofdidx (fopen (path-append odir (string-append name "_residx.c")) "w"))
+          (set! i 0)
+          (format resofdidx "const unsigned int %s_sts_residx[] = { \n" name)
+          (mapcar
+           (lambda (info)
+             (format 
+              resofdidx "  %d,\n" (nth 3 info))
+             (set! i (+ 1 i)))
+           (reverse lpc_info))
+          (format resofdidx "  0\n};\n\n")
+          (fclose resofdidx)
+
+          (set! resofdidx (fopen (path-append odir (string-append name "_ressize.c")) "w"))
+          (format resofdidx "const unsigned char %s_sts_ressize[] = { \n" name)
+          (mapcar
+           (lambda (info)
+             (format 
+              resofdidx "  %d,\n" (nth 2 info)))
+           (reverse lpc_info))
+          (format resofdidx " 0\n};\n\n")
+          (fclose resofdidx)
+          
+;          (format lofdh "extern const unsigned int %s_sts_residx[];\n" name)
+;          (format lofdh "extern const unsigned char %s_sts_ressize[];\n" name)
+          
+          )
+        (begin ;; normal paging 
+          (format lofdidx "const cst_sts_paged %s_sts_paged_vals[] = { \n" name)
+          (set! i 0)
+          (mapcar
+           (lambda (info)
+             (format 
+              lofdidx "  {%d,%d,%d,%s_sts_lpc_page_%d,%s_sts_res_page_%d},\n"
+              (nth 1 info) (nth 2 info) (nth 3 info)
+              name (nth 0 info)
+              name (nth 0 info))
+             (set! i (+ 1 i)))
+           (reverse lpc_info))
+          (format lofdidx "   { 0, 0, 0, 0, 0 }};\n\n")
+          ))
+
+    (format lofdidx "cst_sts_list %s_sts = {\n" name)
+    (format lofdidx "  NULL, ")
+    (if (equal? page_size 1000000)
+        (begin
+          (format lofdidx " NULL,\n")
+;          (format lofdidx "  %s_sts_lpc_page_0,\n" name)
+;          (format lofdidx "  %s_sts_res_page_0,\n" name)
+;          (format lofdidx "  %s_sts_residx,\n" name)
+;          (format lofdidx "  %s_sts_ressize,\n" name)
+          (format lofdidx "  NULL, NULL, NULL, NULL,\n")
+          )
+        (begin
+          (format lofdidx " %s_sts_paged_vals,\n" name)
+          (format lofdidx "  NULL, NULL, NULL, NULL,\n")))
+    (format lofdidx "  %d, /* number of frames */ \n" i)
+    (format lofdidx "  %d, /* lpc order */ \n" lpc_order)
+    (format lofdidx "  %d, /* sample rate */ \n" sample_rate)
+    (format lofdidx "  %f, /* lpc min */ \n" lpc_min)
+    (format lofdidx "  %f, /* lpc range */ \n" lpc_range)
+    (if (probe_file "flite/codec")
+        (set! codec (car (load "flite/codec" t)))
+        (set! codec "ulaw"))
+    (format lofdidx "  \"%s\" /* residual codec */ \n" codec)
     (format lofdidx "};\n\n")
 
-    (format mofdidx "const cst_sts_paged %s_mcep_paged_vals[] = { \n" name)
-    (set! i 0)
-    (mapcar
-     (lambda (info)
-       (format mofdidx "  { %d, 0, 0, %s_sts_mcep_page_%d, 0 }, \n"
-               (nth 1 info) 
-	       name (nth 0 info))
-       (set! i (+ 1 i)))
-       (reverse mcep_info))
-    (format mofdidx "   { 0, 0, 0 }};\n\n")
-
-    (format mofdidx "const cst_sts_list %s_mcep = {\n" name)
-    (format mofdidx "  NULL, %s_mcep_paged_vals,\n" name)
-    (format mofdidx "  NULL, NULL, NULL,\n")
-    (format mofdidx "  %d,\n" i)
-    (format mofdidx "  %d,\n" mcep_order)
-    (format mofdidx "  %d,\n" sample_rate)
-    (format mofdidx "  %f,\n" mcep_min)
-    (format mofdidx "  %f\n" (- mcep_max mcep_min))
+    (if (not (equal? page_size 1000000))
+        (begin ;; mmap 
+          (format mofdidx "const cst_sts_paged %s_mcep_paged_vals[] = { \n" name)
+          (set! i 0)
+          (mapcar
+           (lambda (info)
+             (format mofdidx "  { %d, 0, 0, %s_sts_mcep_page_%d, 0 }, \n"
+                     (nth 1 info) 
+                     name (nth 0 info))
+             (set! i (+ 1 i)))
+           (reverse mcep_info))
+          (format mofdidx "   { 0, 0, 0 }};\n\n")
+          ))
+          
+    (format mofdidx "cst_sts_list %s_mcep = {\n" name)
+    (format mofdidx "  NULL, ")
+    (if (equal? page_size 1000000)
+        (begin
+          (format mofdidx " NULL,\n")
+;          (format mofdidx " %s_sts_mcep_page_0,\n" name)
+;          (format mofdidx " NULL,NULL,NULL,\n")
+          (format mofdidx "  NULL, NULL, NULL, NULL,\n")
+          )
+        (begin 
+          (format mofdidx " %s_mcep_paged_vals,\n" name)
+          (format mofdidx "  NULL, NULL, NULL, NULL,\n")))
+    (format mofdidx "  %d, /* number of frames */ \n" i)
+    (format mofdidx "  %d, /* mcep order */ \n" mcep_order)
+    (format mofdidx "  %d, /* sample rate */ \n" sample_rate)
+    (format mofdidx "  %f, /* mcep min */ \n" mcep_min)
+    (format mofdidx "  %f, /* mcep range */ \n" (- mcep_max mcep_min))
+    (format mofdidx "  NULL /* residual codec */ \n")
     (format mofdidx "};\n\n")
 
     (format cofdidx "/*****************************************************/\n")
@@ -322,6 +429,8 @@ compilable single C file."
     (set! num_entries 0)
     (set! this_ut "")
     (set! this_ut_count 0)
+    (set! unit_name_to_idx nil)
+    (set! all_unit_name_to_idx nil)
     (mapcar
      (lambda (e)
        (if (not (string-equal this_ut (unit_type (nth 0 e))))
@@ -333,11 +442,23 @@ compilable single C file."
 	     (format cofdh "#define unit_%s_start %d\n"
 		     (clunits_normal_phone_name (unit_type (nth 0 e)))
                      num_entries)
+             (if unit_name_to_idx
+                 (set! all_unit_name_to_idx
+                       (cons
+                        (reverse unit_name_to_idx)
+                        all_unit_name_to_idx)))
+             (set! unit_name_to_idx (list (unit_type (nth 0 e))))
+             (set! current_unit_start num_entries)
 	     (set! this_ut (unit_type (nth 0 e)))
 	     (set! this_ut_count 0)
 	     ))
        (format cofdh "#define unit_%s %d\n" 
                (clunits_normal_phone_name (nth 0 e)) num_entries)
+       ;; need to preserver name to idx number as some units might pruned
+       (set! unit_name_to_idx
+             (cons
+              (list (unit_occur (nth 0 e)) (- num_entries current_unit_start))
+              unit_name_to_idx))
        (set! num_entries (+ 1 num_entries))
        (set! this_ut_count (+ 1 this_ut_count))
        (format cofdidx "   { /* %s */ unit_type_%s, unitbase_%s, %d,%d, %s, %s },\n"
@@ -350,6 +471,11 @@ compilable single C file."
 	       (clunits_normal_phone_name (nth 5 e)) ; next
 	       ))
      clunits_entries)
+    (if unit_name_to_idx
+        (set! all_unit_name_to_idx
+              (cons
+               (reverse unit_name_to_idx)
+               all_unit_name_to_idx)))
     (format cofdidx "   { 0,0,0,0 } };\n\n")
     (format cofdidx "#define %s_num_units %d\n" name num_entries)
     (if (> this_ut_count 0)
@@ -472,15 +598,20 @@ Ouput this LPC frame."
 (define (output_mcep name frame ofd)
   "(output_mcep frame duration residual ofd)
 Ouput this MCEP frame."
-  (let ()
-    (set! mcep_order (- (length frame) 3))
+  (let ((i 0))
+    (set! mcep_order (- (length frame) (+ 3 1)))
 
-    (set! frame (cddr frame)) ;; skip the "1"
+    (set! frame (cddr frame)) ;; skip time and the "1"
     (set! frame (cdr frame)) ;; skip the energy
     (set! m_n mcep_page_pos)
-    (while frame
+    (set! i 0)
+;    (format ofd " %d," (mcepcoeff_norm (/ (car frame) 2)))
+;    (set! frame (cdr frame))
+    (while (< i mcep_order)
      (format ofd " %d," (mcepcoeff_norm (car frame)))
-     (set! frame (cdr frame)))
+     (set! frame (cdr frame))
+     (set! i (+ 1 i))
+     )
     (format ofd "\n")
     (set! mcep_page_pos (+ 1 mcep_page_pos))
 
@@ -523,8 +654,37 @@ Get list of answers from leaf node."
 ;		     (car (last (car tree)))
 ;		     'none)
 ;  (format t "%l\n" (car tree))
-  (cellstovals "cl" (mapcar car (caar tree)) ofdh)
+  ;; These should be sorted first (which may or may not make a difference)
+ (cellstovals "cl" (mapcar car (caar tree)) ofdh)
+;  (cellstovals 
+;   "cl" 
+;   (mapcar 
+;    (lambda (x)
+;      (set! xxx (cadr (assoc_string (car x) (cdr current_unit_name_to_idx))))
+;      )
+;    (clunits_sort_candidates (caar tree)))
+;   ofdh)
   (format nil "cl_%04d" cells_count))
+
+(define (sorted_cand_add cand s)
+  (cond
+   ((null s) (list cand))
+   ((< (cadr cand) (cadr (car s)))
+    (cons cand s))
+   (t
+    (cons (car s)
+          (sorted_cand_add cand (cdr s))))))
+
+(define (clunits_sort_candidates cands)
+  (let ((s nil))
+    (mapcar
+     (lambda (x)
+       (set! s (sorted_cand_add x s))
+       )
+     cands)
+    s
+    )
+)
 
 (define (sort_cltrees trees clcatfn)
   (let ((neworder nil) (ut nil))
@@ -554,12 +714,18 @@ Output clunit selection carts into odir/name_carts.c"
 
  (set! val_table nil)
 
+ (format t "new order3 %d\n" (length clunits_selection_trees))
  (set! clunits_selection_trees (sort_cltrees clunits_selection_trees clcatfn))
+ (format t "new order4 %d\n" (length clunits_selection_trees))
 
  (mapcar
   (lambda (cart)
     (set! current_node -1)
     (set! feat_nums nil)
+    ;; The name to idx mapping (in case of pruning)
+    (set! current_unit_name_to_idx 
+          (assoc_string (car cart) all_unit_name_to_idx))
+;    (format t "awb-debug current_unit_name_to_idx %l %l %d\n" (car cart) (car all_unit_name_to_idx) (length all_unit_name_to_idx))
     (do_carttoC ofd ofdh 
 		(format nil "%s_%s" name 
                         (clunits_normal_phone_name (car cart)))
@@ -583,6 +749,7 @@ Output clunit selection carts into odir/name_carts.c"
  (format cofd "\n\n")
  (format cofd "const cst_clunit_type %s_unit_types[] = {\n" name)
  (set! n 0)
+ (format t "new order2 %d\n" (length clunits_selection_trees))
  (mapcar
   (lambda (cart)
     (format ofdh "#define unit_type_%s %d\n" 
@@ -657,6 +824,12 @@ Output clunit selection carts into odir/name_carts.c"
       (string-before x "@")
       "atsign"
       (string-after x "@"))))
+   ((string-matches x ".*#.*" x) 
+    (intern
+     (string-append
+      (string-before x "#")
+      "hash"
+      (string-after x "#"))))
    ((string-matches x ".*:.*")
     (intern
      (string-append
@@ -664,6 +837,66 @@ Output clunit selection carts into odir/name_carts.c"
       "sc"
       (string-after x ":"))))
    (t x)))
+
+;;;
+;;;  Usage count prune
+;;;
+
+(define (clunits_prune_tree tree units_used)
+  (let ((treey nil) (treen nil))
+    (cond
+     ((cdr tree) ;; question
+      (format t "question %l\n" (car tree))
+      (set! treey (clunits_prune_tree (car (cdr tree)) units_used))
+      (set! treen (clunits_prune_tree (car (cddr tree)) units_used))
+      (cond
+       ((null treen)
+        (format t "pruned whole cluster for n %l\n" (car tree))
+        treey)  
+       ((null treey) ;; nothing left
+        (format t "pruned whole cluster for y %l\n" (car tree))
+        treen) ;; could be nil too, but higher level deals with it
+       (t
+        (list (car tree) treey treen))))
+     (t ;; leaf
+      (let ((nn nil))
+        (mapcar 
+         (lambda (c)
+;         (format t "checking %s in %l\n" (car c) units_used)
+           (if (member_string (car c) units_used)
+               (set! nn (cons c nn))
+               (format t "pruning %s\n" (car c))
+               ))
+         (caar tree))
+        (if nn
+            (list (list (reverse nn) (cadr (car tree))))
+            nil))))
+    ))
+
+(define (clunits_prune treesfile units_used_file otreefile)
+  (load treesfile)
+  (set! units_used (load units_used_file t))
+  (set! new_trees
+        (mapcar
+         (lambda (tree)
+           (format t "tree print %s\n" (car tree))
+           (list 
+            (car tree)
+            (clunits_prune_tree 
+             (cadr tree) 
+             (cdr (assoc_string (car tree) units_used)))))
+         clunits_selection_trees))
+
+  (set! ofd (fopen otreefile "w"))
+  (format ofd "(set! clunits_selection_trees '(\n")
+  (mapcar
+   (lambda (x) ;; this is faster
+     (pprintf x ofd))
+   new_trees)
+  (format ofd "))\n")
+  (fclose ofd)
+
+)
 
 (provide 'make_clunits)
 

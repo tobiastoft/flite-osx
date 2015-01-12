@@ -46,13 +46,18 @@
 #include "flite.h"
 #include "flite_version.h"
 
-cst_val *flite_set_voice_list(void);
+cst_val *flite_set_voice_list(const char *voxdir);
+void *flite_set_lang_list(void);
 
 void cst_alloc_debug_summary();
 
+/* Its not very appropriate that these are declared here */
+void usenglish_init(cst_voice *v);
+cst_lexicon *cmu_lex_init(void);
+
 static void flite_version()
 {
-    printf("  Carnegie Mellon University, Copyright (c) 1999-2009, all rights reserved\n");
+    printf("  Carnegie Mellon University, Copyright (c) 1999-2011, all rights reserved\n");
     printf("  version: %s-%s-%s %s (http://cmuflite.org)\n",
 	   FLITE_PROJECT_PREFIX,
 	   FLITE_PROJECT_VERSION,
@@ -86,12 +91,15 @@ static void flite_usage()
 	   "  -ssml       Read input text/file in ssml mode\n"
 	   "  -b          Benchmark mode\n"
 	   "  -l          Loop endlessly\n"
-	   "  -voice NAME Use voice NAME\n"
+	   "  -voice NAME Use voice NAME (NAME can be filename or url too)\n"
+	   "  -voicedir NAME Directory contain voice data\n"
 	   "  -lv         List voices available\n"
 	   "  -add_lex FILENAME add lex addenda from FILENAME\n"
 	   "  -pw         Print words\n"
 	   "  -ps         Print segments\n"
-	   "  -pr RelName  Print relation RelName\n"
+           "  -psdur      Print segments and their durations (end-time)\n"
+	   "  -pr RelName Print relation RelName\n"
+           "  -voicedump FILENAME Dump selected (cg) voice to FILENAME\n"
            "  -v          Verbose mode\n");
     exit(0);
 }
@@ -116,13 +124,30 @@ static cst_utterance *print_info(cst_utterance *u)
 {
     cst_item *item;
     const char *relname;
-
+    int printEndTime = 0;
+    
     relname = utt_feat_string(u,"print_info_relation");
+    if (!strcmp(relname, "SegmentEndTime"))
+      {
+        relname = "Segment";
+        printEndTime = 1;
+      }
+      
     for (item=relation_head(utt_relation(u,relname)); 
 	 item; 
 	 item=item_next(item))
     {
-	printf("%s ",item_feat_string(item,"name"));
+      if (!printEndTime)
+        printf("%s ",item_feat_string(item,"name"));
+      else
+        printf("%s:%1.3f ",item_feat_string(item,"name"), item_feat_float(item,"end"));
+    
+#if 0
+        if (cst_streq("+",ffeature_string(item,"ph_vc")))
+            printf("%s",ffeature_string(item,"R:SylStructure.parent.stress"));
+        printf(" ");
+#endif
+
     }
     printf("\n");
 
@@ -134,6 +159,7 @@ static void ef_set(cst_features *f,const char *fv,const char *type)
     /* set feature from fv (F=V), guesses type if not explicit type given */
     const char *val;
     char *feat;
+    const char *fname;
 
     if ((val = strchr(fv,'=')) == 0)
     {
@@ -145,17 +171,17 @@ static void ef_set(cst_features *f,const char *fv,const char *type)
     {
 	feat = cst_strdup(fv);
 	feat[cst_strlen(fv)-cst_strlen(val)] = '\0';
+        fname=feat_own_string(f,feat);
 	val = val+1;
 	if ((type && cst_streq("int",type)) ||
 	    ((type == 0) && (cst_regex_match(cst_rx_int,val))))
-	    feat_set_int(f,feat,atoi(val));
+	    feat_set_int(f,fname,atoi(val));
 	else if ((type && cst_streq("float",type)) ||
 		 ((type == 0) && (cst_regex_match(cst_rx_double,val))))
-	    feat_set_float(f,feat,atof(val));
+	    feat_set_float(f,fname,atof(val));
 	else
-	    feat_set_string(f,feat,val);
-	/* I don't free feat, because feats think featnames are const */
-	/* which is true except in this particular case          */
+	    feat_set_string(f,fname,val);
+        cst_free(feat);
     }
 }
 
@@ -166,6 +192,7 @@ int main(int argc, char **argv)
     const char *filename;
     const char *outtype;
     cst_voice *desired_voice = 0;
+    const char *voicedir = NULL;
     int i;
     float durs;
     double time_start, time_end;
@@ -175,6 +202,7 @@ int main(int argc, char **argv)
     int bench_iter = 0;
     cst_features *extra_feats;
     const char *lex_addenda_file = NULL;
+    const char *voicedumpfile = NULL;
     cst_audio_streaming_info *asi;
 
     filename = 0;
@@ -187,7 +215,7 @@ int main(int argc, char **argv)
     extra_feats = new_features();
 
     flite_init();
-    flite_voice_list = flite_set_voice_list();
+    flite_set_lang_list(); /* defined at compilation time */
 
     for (i=1; i<argc; i++)
     {
@@ -204,6 +232,8 @@ int main(int argc, char **argv)
 	    flite_verbose = TRUE;
 	else if (cst_streq(argv[i],"-lv"))
         {
+            if (flite_voice_list == NULL)
+                flite_set_voice_list(voicedir);
             flite_voice_list_print();
             exit(0);
         }
@@ -221,7 +251,16 @@ int main(int argc, char **argv)
 	}
 	else if ((cst_streq(argv[i],"-voice")) && (i+1 < argc))
 	{
+            if (flite_voice_list == NULL)
+                flite_set_voice_list(voicedir);
             desired_voice = flite_voice_select(argv[i+1]);
+	    i++;
+	}
+	else if ((cst_streq(argv[i],"-voicedir")) && (i+1 < argc))
+	{
+            voicedir = argv[i+1];
+            if (flite_voice_list == NULL)
+                flite_set_voice_list(voicedir);
 	    i++;
 	}
 	else if ((cst_streq(argv[i],"-add_lex")) && (i+1 < argc))
@@ -247,6 +286,14 @@ int main(int argc, char **argv)
 	    feat_set(extra_feats,"post_synth_hook_func",
 		     uttfunc_val(&print_info));
 	}
+	else if (cst_streq(argv[i],"-psdur"))
+	{
+        // Added by AUP Mar 2013 for extracting durations (end-time) of segments
+        // (useful in talking heads, etc.)
+	    feat_set_string(extra_feats,"print_info_relation","SegmentEndTime");
+	    feat_set(extra_feats,"post_synth_hook_func",
+		     uttfunc_val(&print_info));
+	}
         else if (cst_streq(argv[i],"-ssml"))
         {
             ssml_mode = TRUE;
@@ -256,6 +303,11 @@ int main(int argc, char **argv)
 	    feat_set_string(extra_feats,"print_info_relation",argv[i+1]);
 	    feat_set(extra_feats,"post_synth_hook_func",
 		     uttfunc_val(&print_info));
+	    i++;
+	}
+	else if (cst_streq(argv[i],"-voicedump") && (i+1 < argc))
+	{
+            voicedumpfile = argv[i+1];
 	    i++;
 	}
 	else if ((cst_streq(argv[i],"-set") || cst_streq(argv[i],"-s"))
@@ -298,12 +350,20 @@ int main(int argc, char **argv)
     }
 
     if (filename == NULL) filename = "-";  /* stdin */
+    if (flite_voice_list == NULL)
+        flite_set_voice_list(voicedir);
     if (desired_voice == 0)
         desired_voice = flite_voice_select(NULL);
 
     v = desired_voice;
     feat_copy_into(extra_feats,v->features);
     durs = 0.0;
+
+    if (voicedumpfile != NULL)
+    {
+        flite_voice_dump(v,voicedumpfile);
+        exit(0);
+    }
 
     if (lex_addenda_file)
         flite_voice_add_lex_addenda(v,lex_addenda_file);
@@ -328,12 +388,20 @@ loop:
 
     if (explicit_phones)
 	durs = flite_phones_to_speech(filename,v,outtype);
-    else if (ssml_mode)
-        durs = flite_ssml_to_speech(filename,v,outtype);
     else if ((strchr(filename,' ') && !explicit_filename) || explicit_text)
-	durs = flite_text_to_speech(filename,v,outtype);
+    {
+        if (ssml_mode)
+            durs = flite_ssml_text_to_speech(filename,v,outtype);
+        else
+            durs = flite_text_to_speech(filename,v,outtype);
+    }
     else
-	durs = flite_file_to_speech(filename,v,outtype);
+    {
+        if (ssml_mode)
+            durs = flite_ssml_file_to_speech(filename,v,outtype);
+        else
+            durs = flite_file_to_speech(filename,v,outtype);
+    }
 
     gettimeofday(&tv,NULL);
     time_end = ((double)(tv.tv_sec))+((double)tv.tv_usec/1000000.0);

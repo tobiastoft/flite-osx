@@ -49,8 +49,6 @@ static const char * const us_english_whitespace = " \t\n\r";
 
 void usenglish_init(cst_voice *v)
 {
-    us_text_init();
-
     /* utterance break function */
     feat_set(v->features,"utt_break",breakfunc_val(&default_utt_break));
 

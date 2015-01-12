@@ -11,15 +11,15 @@
 @c world example, but many others too.  I happily acknowledge their
 @c aid in producing this document -- awb
 
-@set EDITION 1.4
-@set VERSION 1.4
-@set UPDATED 4th January 2009
+@set EDITION 2.0
+@set VERSION 2.0
+@set UPDATED 18th November 2014
 
 @ifinfo
 This file documents @code{Flite}, a small, fast run-time speech
 synthesis engine.
 
-Copyright (C) 2001-2009 Carnegie Mellon University
+Copyright (C) 2001-2014 Carnegie Mellon University
 
 Permission is granted to make and distribute verbatim copies of
 this manual provided the copyright notice and this permission notice
@@ -52,7 +52,7 @@ by the authors.
 
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 2001-2009 Carnegie Mellon University, all rights
+Copyright @copyright{} 2001-2014 Carnegie Mellon University, all rights
 reserved.
 
 Permission is granted to make and distribute verbatim copies of
@@ -106,9 +106,9 @@ to almost any platform, including very small hardware.
 
 Flite is really just a synthesis library that can be linked into other
 programs, it includes two simple voices with the distribution, an old
-diphone voice and anb example limited domain voice which uses the newer
+diphone voice and an example limited domain voice which uses the newer
 unit selection techniques we have been developing.  Neither of these
-voices would be considered production voices but server as examples, new
+voices would be considered production voices but serve as examples, new
 voices will be released as they are developed.
 
 The latest versions, comments, new voices etc for Flite are available
@@ -122,11 +122,11 @@ from its home page which may be found at
 
 Flite is free software.  It is distributed under an X11-like license.
 Apart from the few exceptions noted below (which still have
-similarly open lincenses) the general license is
+similarly open licenses) the general license is
 @example
                   Language Technologies Institute                      
                     Carnegie Mellon University                        
-                     Copyright (c) 1999-2009                          
+                     Copyright (c) 1999-2014
                        All Rights Reserved.                           
                                                                       
  Permission is hereby granted, free of charge, to use and distribute  
@@ -174,16 +174,17 @@ The MLSA, MLPG code comes directly NITECH's hts engine code, though we
 have done some optimizations.
 @item Marcela Charfuelan (DFKI)
 For the mixed-excitation techniques (but no direct code).  These
-originally came from NITECH but we understood the technqiues from
+originally came from NITECH but we understood the techniques from
 Marcela's Open Mary Java code and implemented them in our optimized
 version of MLSA.
 @item David Huggins-Daines:
 much of the very early clunits code, porting to multiple platforms,
 substantial code tidy up and configure/autoconf guidance (up to 2001).
 @item Cepstral, LLC (@url{http://cepstral.com}):
-For supporting DHD to spend time on flite and passing back the important
-fixes and enhancements while on a project funded by the 
-Portuguese Foundation for Science and Technology (FCT) Praxis XXI program.
+For supporting DHD to spend time (in early 2001) on flite and passing
+back the important fixes and enhancements while on a project funded by
+the Portuguese Foundation for Science and Technology (FCT) Praxis XXI
+program specifically to produce an open source synthesizer.
 @item Willie Walker <william.walker@@sun.com> and the Sun Speech Group:
 lots of low level bugs (and fixes).
 @item Henry Spencer:
@@ -231,7 +232,7 @@ dealing with cross compilation.
 
 On Linux systems, we also support shared libraries which are useful for
 keeping space down when multiple different application are linked to the
-flite libraries.  For development we strong discourage use of shared
+flite libraries.  For development we strongly discourage use of shared
 libraries as it is too easy to either not set them up correctly or
 accidentally pick up the wrong version.  But for installation they are
 definitely encouraged.  That is if you are just going to make and
@@ -251,7 +252,7 @@ appropriately.
 @example
 make install
 @end example
-Will installe the binaries (@file{bin/flite*}), include files and
+Will install the binaries (@file{bin/flite*}), include files and
 libraries in appropriate subdirectories of the defined install
 directory, @file{/usr/local} by default.  You can change this at configure
 time with
@@ -262,6 +263,9 @@ time with
 @section Windows Support
 
 @section Window CE Support
+
+@emph{NOTE: as Windows CE is somewhat rare now, we do not guarantee this
+still works.}
 
 Flite has been successfully compiled by a number of different groups
 under Windows CE.  The system should compile under Embedded Visual
@@ -319,6 +323,13 @@ as if those were the sizes of parameters that were used to the train
 the voice. 
 
 @section PalmOS Support
+
+@emph{NOTE: as PalmOS is somewhat rare now, we do not guarantee this
+still works.}
+
+Support for PalmOS was removed from 1.9, I no longer have any working
+PalmOS devices.  But this section remains for people who do, but they
+may need to update something to make this work.
 
 Starting with 1.3 we have initial support for PalmOS using the free
 development tools.  The compilation method assumes the target device
@@ -617,7 +628,7 @@ models developed in Festival, Flite uses HRGs as its basic utterance
 representation structure.
 
 Most of a synthesizer is in its data (lexicons, unit database etc),
-the actual synthesis code it pretty small.  In Festival most of that
+the actual synthesis code is pretty small.  In Festival most of that
 data exists in external files which are loaded on demand.  This is
 obviously slow and memory expensive (you need both a copy on the data
 on disk and in memory).  As one of the principal targets for Flite is
@@ -703,7 +714,7 @@ updating of some list when each new type is added, this wouldn't be
 thread safe.  Thus an explicit method of defining user types is done in
 @file{src/utils/cst_val_user.c}.  This is not as neat as defining on the
 fly or using a registration function but it is thread safe and these
-user types wont changes often.
+user types won't change often.
 
 @node APIs, Converting FestVox Voices, Flite Design, Top
 @chapter APIs
@@ -713,10 +724,14 @@ applications.  Included with the distribution is a small example
 executable that allows synthesis of strings of text and text files
 from the command line.
 
+You may want to look at Bard @file{http://festvox.org/bard/}, an ebook
+reader with a tight coupling to flite as a synthesizer.  This is the
+most elaborate use of the Flite API within our suite of programs.
+
 @section flite binary
 
 The example flite binary may be suitable for very simple applications.
-Unlike Festival its start up time is very short (less that 25ms on a PIII
+Unlike Festival its start up time is very short (less than 25ms on a PIII
 500MHz) making it practical (on larger machines) to call it each
 time you need to synthesize something.
 @example
@@ -773,6 +788,21 @@ flite -lv
 The voices which get linked together are those listed in the
 @code{VOICES} in the @file{main/Makefile}.  You can change that as you
 require.
+
+Voices may also be dynamically loaded from files as well as built in.
+The argument to the @code{-voice} option may be pathname to a dumped
+(Clustergen) voice.  This may be a Unix pathname or a URL (only protocols @file{http} and @file{file} are supported.  For example
+@example
+flite -voice file://cmu_us_awb.flitevox -f doc/alice -o alice.wav
+flite -voice http://festvox.org/voices/cmu_us_ksp.flitevox -f doc/alice -o alice.wav
+@end example
+Voices will be loaded once and added to @code{flite_voice_list}.
+Although these voices are often small (a few megabytes) there will
+still be some time required to read them in the first time.  The
+voices are not mapped, they are read into newly created structures.
+
+This loading function is currently only supported for Clustergen
+voices.
 
 @section C example
 
@@ -845,7 +875,16 @@ from it for further processing and access.
 @item cst_voice *flite_voice_select(const char *name);
 returns a pointer to the voice named @code{name}.  Will retrurn
 @code{NULL} if there is not match, if @code{name == NULL} then the
-first voice in the voice list is returned.
+first voice in the voice list is returned.  If @code{name} is a url
+(starting with @file{file:} or @file{http:}, that file will be
+accessed and the voice will be downloaded from there.
+@item float flite_ssml_file_to_speech(const char *filename, cst_voice *voice, const char *outtype);
+Will read the file as ssml, not all ssml tags are supported but many
+are, unsupported ones are ignored.  Voice selection works by naming
+the internal name of the voice, or the name may be a url and the voice
+will be loaded.  The audio tag is supported for loading waveform files, again urls are supported.
+@item float flite_ssml_text_to_speech(const char *text, cst_voice *voice, const char *outtype);
+Will treat the text as ssml.
 @item int flite_voice_add_lex_addenda(cst_voice *v, const cst_string *lexfile);
 loads the pronunciations from @code{lexfile} into the lexicon
 identified in the given voice (which will cause all other voices using
@@ -860,15 +899,15 @@ be complained about on standard out.
 @section Streaming Synthesis
 
 In 1.4 support was added for streaming synthesis.  Basically you may
-provided a call back function that will be called with waveform data
+provide a call back function that will be called with waveform data
 immediately when it is available.  This potentially can reduce the
-dealy bewteen sending text to the synthesized and having audio
+delay between sending text to the synthesized and having audio
 available.
 
 The support is through a call back function of type
 @example
 int audio_stream_chunk(const cst_wave *w, int start, int size, 
-                       int last, void *user)
+                       int last, cst_audio_streaming_info *asi)
 @end example
 If the utterance feature @code{streaming_info} is set (which can
 be set in a voice or in an utterance).  The LPC or MLSA resynthesis
@@ -884,8 +923,8 @@ program when @code{stream} is given as the playing option.  (Though in
 the command line program the function it isn't really useful.)
 
 In order to use streaming you must provide call back function in your
-particualr thread.  This is done bay adding features to the voice in
-your thread.  Suppose your function was declrared as
+particular thread.  This is done by adding features to the voice in
+your thread.  Suppose your function was declared as
 
 @example
 int example_audio_stream_chunk(const cst_wave *w, int start, int size, 
@@ -923,6 +962,14 @@ feat_set(voice->features,
          "streaming_info",
          audio_streaming_info_val(asi));
 @end example
+Another example is given in @file{testsuite/by_word_main.c} which
+shows a call back funtion that also prints the token as it is being
+synthesized.  The @file{utt} field in the
+@file{cst_audio_streaming_info} structure will be set to the current
+utterance.  Please note that the @file{item} field in the
+@file{cst_audio_streaming_info} structure is for your convenience and
+is not set by anyone at all.  The previous sentence exists in the
+documentation so that I can point at it, when user's fail to read it.
 
 @node Converting FestVox Voices, , APIs, top
 @chapter Converting FestVox Voices
@@ -1045,9 +1092,9 @@ Note that the flite code expects waveform files to be in Microsoft RIFF
 format and cannot deal with files in other formats.  Some earlier
 versions of the Edinburgh Speech Tools used NIST as the default header
 format.  This is likely to cause flite and its related programs not
-work. So do ensure you waveform files are in riff format (ch_wave -info
+work. So do ensure your waveform files are in riff format (ch_wave -info
 wav/* will tell you the format).  And the following fill convert
-all you wave files
+all your wave files
 @example
    mv wav wav.nist
    mkdir wav
@@ -1114,7 +1161,7 @@ to
 Note this conversion is limited.  Because it depends on the C compiler
 to do the final conversion into binary object format (a good idea in
 general for portability), you can easily generate files too big for the
-C compiler to deal with.  We have spent a some time investigating this
+C compiler to deal with.  We have spent some time investigating this
 so the largest possible voices can be converted but it is still too
 limited for our larger voices.  In general the limitation seems to be
 best quantified by the number of pitch periods in the database.  After
@@ -1123,7 +1170,7 @@ probably solutions to this but we have not yet investigated them.  This
 limitation doesn't seem to be an issue with the diphone voices as they
 are typically much smaller than unit selection voices.
 
-@section Statistical Voice Building
+@section Statistical Voice Building (Clustergen)
 
 The process of building from a clustergen (cg) voice is also
 supported.  It is assumed the environment variable @code{FLITEDIR} is
@@ -1152,19 +1199,32 @@ directory.  The you can compile it with
    ./flite_cmu_us_awb "Hello world"
 @end example
 Note that the voice that is to be converted *must* be a standard
-clustergen voice with f0, mceps, delta mceps and voicing in its
+clustergen voice with f0, mceps, delta mceps (optionally strengths for
+mixed excitation) and voicing in its
 combined coeffs files.  The method could be changed to deal with other
 possibilities but it will only work for default build method.
 
 The generated library @file{libflite_cmu_us_awb.a} may be linked with
-other programs linkle any other flite voice.  The binary generated
+other programs like any other flite voice.  The binary generated
 @code{flite_cmu_us_awb} links in only one voice (unlike the flite binary in
 the full flite distribution.
+
+A single flat file contain the cg voice can also be generated that can
+be loaded at run time into the flite binary.  You can dump this file
+from the initial constructed flite binary
+@example
+   ./flite_cmu_us_awb -voicedump cmu_us_awb.flitevox
+@end example
+The file cmu_us_awb.flitevox may now be references (with pathname/url) on
+the flite command line and used by the synthesizer
+@example
+   ./flite -voice cmu_us_awb.flitevox "Hello World"
+@end example
 
 @section Lexicon Conversion
 
 As of 1.3 the script for converting the CMU lexicon (as distributed as
-part of Festival) is included.  @file{make_cmulex} will using the
+part of Festival) is included.  @file{make_cmulex} will use the
 version of CMULEX unpacked in the current directory to build a new
 lexicon.  Also in 1.3. a more sophisticated compression technique is
 used to reduce the lexicon size.  The lexicon is pruned, removing
@@ -1179,6 +1239,89 @@ are basic tools in the @file{flite/tools/} directory that include Scheme
 code to convert various Scheme structures to C include CART tree
 conversion and Lisp list conversion.  The other major source of help
 here is the existing language examples in @file{flite/lang/usenglish/}.
+
+Adding new language support is far from automatic, but there are core
+scripts for setting up new Flite support for languages and lexicons.  There
+are also scripts for converting (Festival) phoneset definitions to C
+and converting Festival lexicons to LTS rules and compressed lexicons
+in C.
+
+But beyond that you are sort of on your own.  The largest gap here is
+text normalization.  We do not yet have a standardize model for text
+normalization with well definied models for which we could write
+conversion scripts.  
+
+However here is a step by step attempt to show you what to do when
+building support for a new language/lexicon.
+
+Suppose we need to create support for Pashto, and already have a 
+festival voice running, and want it now to run in flite.  Converting
+the voice itself (unitselction or clustergen) is fairly robust, but
+you will also need C libraries for @file{cmu_pashto_lang} and 
+@file{cmu_pasho_lex}.  The first stage is to create the basic
+temple files for these.  In the core @file{flite/} source directory 
+type
+@example
+   ./tools/make_new_lang_lex pashto
+@end example
+This will create language and lex template files in
+@file{lang/cmu_pashto_lang/'} and @file{cmu_pashto_lex}.
+
+Then in firectory @file{lang/cmu_pashto_lang/} type
+@example
+    festival $FLITEDIR/tools/make_phoneset.scm
+    ...
+    festival> (phonesettoC "cmu_pashto" (car (load "PATHTO/cmu_pashto_transtac_phoneset.scm" t)) "pau" ".")
+@end example
+This will create @file{cmu_pashto_lang_phoneset.[ch]}.  You must the add these
+explicitly to the @file{Makefile}.
+
+Then in @file{lang/cmu_pashto_lex/} you have to build the C version of
+the lexicon and letter to sound rules.  The core script is in
+@file{flite/tools/build_lex}.
+@example
+    mkdir lex
+    cd lex
+    cp -p $FLITEDIR/tooks/build_lex .
+@end example
+Edit build_lex to give it the name of your lexicon name, and compiled
+lexicon from your voice.
+@example
+LEXNAME=cmu_pashto
+LEXFILE=lexicon.out
+@end example
+You should (I think) remove the first line ``MNCL'' from your
+@file{lexicon.out} file, note this @emph{must} be the compiled lexicon
+not the list of entries you compiled from as it expects the ordering, and
+the syllabification.
+@example
+    ./build_lex setup
+@end example
+Build the letter to sound rules (probably again)
+@example
+    ./build_lex lts
+@end example
+Convert the compiled letter to sound rules to C.  This converts the
+decision trees to decision graphs and runs WFST minimization of them
+to get a more efficient set of structures.  This puts the generated C
+files in @file{c/}.
+@example
+    ./build_lex lts2c
+@end example
+Now convert the lexical entries themselves
+@example
+    ./build_lex lex
+@end example
+Again the generate C files will be put in @file{c/}.
+
+Now we generated a Huffman codes compressed lexicon to reduce the 
+lexicon size, merging frequent letter sequences and phone sequences.
+@example
+    ./build_lex compresslex
+@end example
+The copy the @file{.c} and @file{.h} files to @file{lang/cmu_pashto_lex/}
+[something about compressed and non-compressed???]
+
 
 @chapter Porting to new platforms
 

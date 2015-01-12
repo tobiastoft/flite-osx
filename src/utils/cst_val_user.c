@@ -63,7 +63,7 @@ CST_VAL_REGISTER_TYPE_NODEL(userdata,cst_userdata)
 CST_VAL_REG_TD_FUNCPTR(itemfunc,cst_itemfunc,43)
 CST_VAL_REG_TD_TYPE(features,cst_features,45)
 CST_VAL_REG_TD_FUNCPTR(breakfunc,cst_breakfunc,47)
-CST_VAL_REG_TD_TYPE_NODEL(cg_db,cst_cg_db,49)
+CST_VAL_REG_TD_TYPE(cg_db,cst_cg_db,49)
 CST_VAL_REG_TD_TYPE(voice,cst_voice,51)
 CST_VAL_REG_TD_TYPE(audio_streaming_info,cst_audio_streaming_info,53)
 

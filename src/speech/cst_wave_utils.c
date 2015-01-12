@@ -38,9 +38,11 @@
 /*                                                                       */
 /*  This contains software written external to Flite                     */
 /*       ulaw code came via the Edinburgh Speech Tools                   */
+/*  g72x codec came from Sun Microsystems                                */
 /*                                                                       */
 /*************************************************************************/
 
+#include "g72x.h"
 
 /*
 ** This routine converts from linear to ulaw.
@@ -135,4 +137,71 @@ short cst_ulaw_to_short( unsigned char ulawbyte )
     if ( sign != 0 ) sample = -sample;
 
     return sample;
+}
+
+
+unsigned char *cst_g721_decode(int *actual_size,int size, 
+                       const unsigned char *packed_residual
+                       )
+{
+    struct g72x_state state;
+    short sample_short;
+    unsigned char *unpacked_residual;
+    unsigned char code, xcode;
+    int ur=0;
+    int dec_bits;
+
+    *actual_size = size*2;
+    unpacked_residual = cst_alloc(unsigned char, *actual_size);
+    g72x_init_state(&state);
+    dec_bits = 4; /* g721 4-bit encoding */
+
+    for (ur=0; ur <*actual_size; ur++)
+    {
+        xcode = packed_residual[ur/2];
+        if (ur % 2 == 0)
+            code = (xcode & 0xF0) >> dec_bits;
+        else
+            code = (xcode & 0x0F);
+        sample_short = g721_decoder(code,AUDIO_ENCODING_LINEAR,&state);
+        unpacked_residual[ur] = cst_short_to_ulaw(sample_short);
+    }
+
+    return unpacked_residual;
+}
+
+unsigned char *cst_g721_encode(int *packed_size,int actual_size, 
+                               const unsigned char *unpacked_residual
+                               )
+{
+    struct g72x_state state;
+    unsigned char *packed_residual;
+    unsigned char code, xcode=0;
+    int ur=0;
+    int dec_bits;
+
+    *packed_size = (actual_size+1)/2; /* will round down to even number */
+    packed_residual = cst_alloc(unsigned char, *packed_size);
+
+    g72x_init_state(&state);
+    dec_bits = 4; /* g721 4-bit encoding */
+
+    for (ur=0; ur < actual_size; ur++)
+    {
+        code = g721_encoder((int)cst_ulaw_to_short(unpacked_residual[ur]),
+                            AUDIO_ENCODING_LINEAR,&state);
+        if (ur % 2 == 0)
+        {
+            xcode = 0;
+            xcode = code << dec_bits;
+        }
+        else
+        {
+            xcode += code;
+            packed_residual[ur/2] = xcode;
+        }
+    }
+
+    return packed_residual;
+
 }

@@ -7,11 +7,17 @@
 #include "cst_cart.h"
 
 extern const cst_cart * const cmu_us_rms_f0_carts[];
+extern const cst_cart cmu_us_rms_spamf0_phrase_cart;
+extern const cst_cart cmu_us_rms_spamf0_accent_cart;
+extern const float * const cmu_us_rms_spamf0_accent_vectors[];
+#define cmu_us_rms_spamf0_accent_num_channels 8
+#define cmu_us_rms_spamf0_accent_num_frames 94
 
-extern const cst_cart * const cmu_us_rms_single_mcep_carts[];
+
+extern const cst_cart * cmu_us_rms_single_mcep_carts[];
 #define cmu_us_rms_single_num_channels 114
 #define cmu_us_rms_single_num_frames 10446
-extern const unsigned short * const cmu_us_rms_single_model_vectors[];
+extern const unsigned short * cmu_us_rms_single_model_vectors[];
 extern const dur_stat * const cmu_us_rms_dur_stats[];
 extern const cst_cart cmu_us_rms_dur_cart;
 extern const char * const *cmu_us_rms_phone_states[];
@@ -401,6 +407,27 @@ const double * const cmu_us_rms_me_h[] = {
    cmu_us_rms_me_filter_4
 };
 
+#define cmu_us_rms_num_dur_models 1
+#define cmu_us_rms_num_param_models 1
+const int cmu_us_rms_num_channels[] = {
+    cmu_us_rms_single_num_channels
+};
+const int cmu_us_rms_num_frames[] = {
+    cmu_us_rms_single_num_frames
+};
+const unsigned short **cmu_us_rms_model_vectors[] = {
+    cmu_us_rms_single_model_vectors
+};
+const cst_cart **cmu_us_rms_mcep_carts[] = {
+    cmu_us_rms_single_mcep_carts
+};
+const dur_stat **cmu_us_rms_dur_stats_table[] = {
+    cmu_us_rms_dur_stats
+};
+const cst_cart *cmu_us_rms_dur_cart_table[] = {
+    &cmu_us_rms_dur_cart
+};
+
 const cst_cg_db cmu_us_rms_cg_db = {
   "cmu_us_rms",
   cmu_us_rms_types,
@@ -408,18 +435,22 @@ const cst_cg_db cmu_us_rms_cg_db = {
   16000,
   98.000000,24.000000,
   cmu_us_rms_f0_carts,
-  cmu_us_rms_single_mcep_carts,
-  NULL,NULL,
-  cmu_us_rms_single_num_channels,
-  cmu_us_rms_single_num_frames,
-  cmu_us_rms_single_model_vectors,
-  0,0,NULL,
-  0,0,NULL,
+  cmu_us_rms_num_param_models,
+  cmu_us_rms_mcep_carts,
+  &cmu_us_rms_spamf0_accent_cart,
+  &cmu_us_rms_spamf0_phrase_cart,
+  cmu_us_rms_num_channels,
+  cmu_us_rms_num_frames,
+  cmu_us_rms_model_vectors,
+  cmu_us_rms_spamf0_accent_num_channels,
+  cmu_us_rms_spamf0_accent_num_frames,
+  cmu_us_rms_spamf0_accent_vectors,
   cmu_us_rms_model_min,
   cmu_us_rms_model_range,
   0.005000, /* frame_advance */
-  cmu_us_rms_dur_stats,
-  &cmu_us_rms_dur_cart,
+  cmu_us_rms_num_dur_models,
+  cmu_us_rms_dur_stats_table,
+  cmu_us_rms_dur_cart_table,
   cmu_us_rms_phone_states,
   1, /* 1 if mlpg required */
   cmu_us_rms_dynwin,
@@ -430,5 +461,6 @@ const cst_cg_db cmu_us_rms_cg_db = {
   1, /* cg:mixed_excitation */
   5,48, /* filter sizes */
   cmu_us_rms_me_h,
-  2.0 /* gain */
+  1, // cg:spamf0
+  1.5 /* gain */
 };

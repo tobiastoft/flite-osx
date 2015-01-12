@@ -31,7 +31,7 @@
 ##                                                                       ##
 ###########################################################################
 ##                                                                       ##
-##  cmu_us_kal diphone                                                   ##
+##  cmu_us_kal diphone (with residual g721 encoded)                      ##
 ##                                                                       ##
 ###########################################################################
 TOP=../..
@@ -42,7 +42,8 @@ H = voxdefs.h
 SRCS = cmu_us_kal_diphone.c cmu_us_kal.c \
        cmu_us_kal_lpc.c \
        cmu_us_kal_res.c \
-       cmu_us_kal_residx.c
+       cmu_us_kal_residx.c \
+       cmu_us_kal_ressize.c
 OBJS = $(SRCS:.c=.o)
 SCM=
 FILES = Makefile $(SCM) $(SRCS) $(H)

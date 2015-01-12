@@ -80,7 +80,7 @@ then
    infile=$2
    outfile=$3
    # Normalize the string to be compressed
-   cat $infile | awk '{print $1}' |
+   cat $infile | awk '{printf("\"%s\"\n",$1)}' |
    cat >huff.entries.corpus
    $ESTDIR/../festival/bin/festival -b $FLITEDIR/tools/make_lex.scm '(utf8entries "huff.entries.corpus" "huff.tmp.corpus")' 
 fi
@@ -90,7 +90,7 @@ then
    infile=$2
    outfile=$3
    # Normalize the text to be compressed
-   cat $infile | awk '{print $2}' |
+   cat $infile | awk '{print $NF}' |
    sed 's/\\/ /g' >huff.tmp.corpus
 fi
 
@@ -191,6 +191,7 @@ do
 
    # Summary 
    echo $PASS joining `cat huff.tmp.corpus.$PASS.best`
+   echo "  PAS $PASS_ALPHABET_SIZE AS $ALPHABET_SIZE"
    echo "  Corpus was "`cat huff.tmp.corpus.$PASS | wc -w`
    echo "  Corpus is "`cat huff.tmp.corpus.$NPASS | wc -w`
    CORPUS_IS=`cat huff.tmp.corpus.$NPASS | wc -w`

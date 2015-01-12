@@ -1,7 +1,7 @@
 
          Flite: a small run-time speech synthesis engine
-                      version 1.4-release
-          Copyright Carnegie Mellon University 1999-2009
+                      version 2.0.0-release
+          Copyright Carnegie Mellon University 1999-2014
                       All rights reserved
                       http://cmuflite.org
 
@@ -28,7 +28,7 @@ Flite is the answer to the complaint that Festival is too big, too slow,
 and not portable enough.
 
 o Flite is designed for very small devices, such as PDAs, and also
-  for large server machines with lots of ports.
+  for large server machines which need to serve lots of ports.
 o Flite is not a replacement for Festival but an alternative run time
   engine for voices developed in the FestVox framework where size and
   speed is crucial.
@@ -42,7 +42,7 @@ o All voices, lexicons and language model data are const and in the
   text segment (i.e. they may be put in ROM).  As they are linked in
   at compile time, there is virtually no startup delay.
 o Although the synthesized output is not exactly the same as the same 
-  voice in Festival they are effectively equivalent.  That is flite 
+  voice in Festival they are effectively equivalent.  That is, flite 
   doesn't sound better or worse than the equivalent voice in festival,
   just faster, smaller and scalable.
 o For standard diphone voices, maximum run time memory
@@ -88,14 +88,16 @@ We have successfully compiled and run on
 
 o Various Intel Linux systems (and iPaq Linux), under various versions
   of GCC (2.7.2 to 4.x)
+o Mac OS X
+o Various Android devices
 o FreeBSD 3.x and 4.x
 o Solaris 5.7, and Solaris 9
-o Initial support for Mac OS X
-o Windows 2000/XP under Cygwin 1.3.5 and later
-o Support for WinCE (2.11 and 3.0) WM (5.x plus) is included 
-o PalmOS 5.x devices (Treo 600, Zire 31 and Tungsten C)
+o Windows 2000/XP and later under Cygwin 1.3.5 and later
 o Successfully compiles and runs under 64Bit Linux architectures
 o OSF1 V4.0 (gives an unimportant warning about sizes when compiled cst_val.c)
+
+Previously we supported PalmOS and Windows CE but these seem to be rare
+nowadays so they are no longer actively supported.
 
 Other similar platforms should just work, we have also cross compiled
 on a Linux machine for StrongARM.  However note that new byte order
@@ -106,6 +108,28 @@ a new archiecture.
 
 News
 ----
+
+New in 2.0.0 (Dec 2014)
+    o Indic language support (Hindi, Tamil and Telugu)
+    o SSML support
+    o CG voices as files accessilble by file:/// and http://
+      (and set of 13 voices to load)
+    o random forest (multimodel support) improves voice quality
+    o Supports diffrent sample rates/mgc order to tune for speed
+    o Kal diphone 500K smaller
+    o Fixed lots of API issues
+    o thread safe (again) after initialization
+    o Generalized tokenstreams (used in Bard Storyteller)
+    o simple-Pulseaudio support
+    o Improved Android support
+    o Removed PalmOS support from distribution
+    o Companion multilingual ebook reader Bard Storyteller 
+       http://festvox.org/bard/
+
+New in 1.4.1 (March 2010)
+    o better ssml support (actually does something)
+    o better clunit support (smaller)
+    o Android support
 
 New in 1.4 (December 2009)
     o crude multi-voice selection support (may change)
@@ -118,13 +142,13 @@ New in 1.4 (December 2009)
     o Windows support with Visual Studio (specifically for the Olympus 
         Spoken Dialog System)
     o WinCE support is redone with cegcc/mingw32ce with example
-        example TTS app: Fluwm: Flite on Windows Mobile
+        example TTS app: Flowm: Flite on Windows Mobile
     o Speed-ups in feature interpretation limiting calls to alloc
     o Speed-ups (and fixes) for converting clunits festvox voices
 
 New in 1.3-release (October 2005)
     o fixes to lpc residual extraction to give better quality output
-    o An updated lexicon (festlex_CMU from festival-2.0) and better
+    o An updated lexicon (festlex_CMU from festival-2.0.95) and better
       compression its about 30% of the previous size, with about 
       the same accuracy
     o Fairly substantial code movements to better support PalmOS and 
@@ -146,8 +170,8 @@ Compilation
 
 In general
 
-    tar zxvf flite-1.4-release.tar.gz
-    cd flite-1.4-release
+    tar zxvf flite-2.0.0-release.tar.gz
+    cd flite-2.0.0-release
     ./configure 
     make
 
@@ -233,7 +257,7 @@ under Unix you can call it
     ./bin/flite_time `date +%H:%M`
 
 ./bin/flite -lv 
-    List the voices available in this build
+    List the voices linked in directly in this build
 
 ./bin/flite -voice rms -f doc/alice
     Speak with the US male rms voice
@@ -242,15 +266,25 @@ under Unix you can call it
 ./bin/flite -voice slt -f doc/alice
     Speak with the US female slt voice
 
+./bin/flite -voice http://festvox.org/flite/voices/US/cmu_us_ksp.flitevox -f doc/alice
+    Speak with KSP voice, download on the fly from festvox.org
+./bin/flite -voice voices/cmu_us_ahw.flitevox -f doc/alice
+    Speak with AHW voice loaded from the local file.
+
+Voice names are identified as loadable files if the name includes a
+"/" (slash) otherwise they are treated as internal names.  So if you
+want to load voices from the current directory you need to prefix the
+with "./".
+
 Voice quality
 -------------
 
 So you've eagerly downloaded flite, compiled it and run it, now you
-are disappointed that is doesn't sound wonderful, sure its fast and
+are disappointed that it doesn't sound wonderful, sure its fast and
 small but what you really hoped for was the dulcit tones of a deep
 baritone voice that would make you desperately hang on every phrase it
-sang.  But instead you get an 8Khz diphone voice that sounds like it
-came from the last millenium.
+mellifluously produces.  But instead you get an 8Khz diphone voice that
+sounds like it came from the last millenium.
 
 Well, first, you are right, it is an 8KHz diphone voice from the last
 millenium, and that was actually deliberate.  As we developed flite we
@@ -259,14 +293,28 @@ that very same voice in Festival.  Flite is an *engine*.  We want to
 be able take voices built with the FestVox process and compile them
 for flite, the result should be exactly the same quality (though of
 course trading the size for quality in flite is also an option).  The
-included voice is just an sample voice that was used in the testing
-process.  We have better voices in Festival and are working on the
-coversion process to make it both more automatic and more robust and
-tunable, but we haven't done that yet, so in this first beta release.
-This old poor sounding voice is all we have, sorry, we'll provide you
-with free, high-quality, scalable, configurable, natural sounding
-voices for flite, in all languages and dialects, with the tools to
-built new voices efficiently and robustly as soon as we can.  Though
-in the mean time, a few higher quality voices will be released with
-the next version.
+included voice is just a sample voice that was used in the testing
+process.  
+
+We expect that often voices will be loaded from external files, and we
+have now set up a voice repository on 
+   http://festvox.org/flite/voices/LANG/*.flitevox
+If you visit there with a browser you can hear the examples.  You can
+also download the .flitevox files to you machine so you don't need a
+network connect everytime you need to load a voice.
+
+We are now actively adding to this list of available voices in English
+and other languages.
+
+Bard Storyteller:  http://festvox.org/bard/
+-------------------------------------------
+
+Bard is a companion app that read ebooks, both displaying them and
+actually reading them to you using flite.  Bard supports a wide
+range of fonts, and flite voices, and books in text, html and
+epub format.  Bard is used as a evaluation of flites capabilities
+and an example of a serious application using flite.
+
+
+
 

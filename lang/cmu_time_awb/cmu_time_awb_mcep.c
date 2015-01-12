@@ -41704,7 +41704,7 @@ const cst_sts cmu_time_awb_mcep_vals[] = {
 cst_sts_list cmu_time_awb_mcep = {
 	cmu_time_awb_mcep_vals,
         NULL,
-	NULL, NULL, NULL, /* May be filled in at runtime */
+	NULL, NULL, NULL, NULL, /* May be filled in at runtime */
 	10424,
 	12,
 	16000,

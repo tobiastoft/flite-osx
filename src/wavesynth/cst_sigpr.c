@@ -78,7 +78,7 @@ cst_wave *lpc_resynth(cst_lpcres *lpcres)
 	/* resynthesis the signal */
 	for (j=0; j < pm_size_samps; j++,r++)
 	{
-	    outbuf[o] = (float)cst_ulaw_to_short(lpcres->residual[r]);
+            outbuf[o] = (float)cst_ulaw_to_short(lpcres->residual[r]);
 	    cr = (o == 0 ? lpcres->num_channels : o-1);
 	    for (ci=0; ci < lpcres->num_channels; ci++)
 	    {
@@ -192,7 +192,6 @@ cst_wave *lpc_resynth_fixedpoint(cst_lpcres *lpcres)
     int ci,cr;
     int *outbuf, *lpccoefs;
     int pm_size_samps, ilpc_min, ilpc_range;
-    int pp = 0;
     int rc = CST_AUDIO_STREAM_CONT;
 
     /* Get a new wave to build the signal into */
@@ -214,6 +213,15 @@ cst_wave *lpc_resynth_fixedpoint(cst_lpcres *lpcres)
     {
 	pm_size_samps = lpcres->sizes[i];
 
+        if (lpcres->delayed_decoding)
+        {
+            /* do decoding for this frame */
+            add_residual_g721vuv(lpcres->sizes[i],
+                                 &lpcres->residual[r],
+                                 lpcres->sizes[i],
+                                 lpcres->packed_residuals[i]);
+        }
+
 	/* Unpack the LPC coefficients */
 	for (k=0; k<lpcres->num_channels; k++)
 	    lpccoefs[k]=((lpcres->frames[i][k]/2*ilpc_range)/2048+ilpc_min)/2;
@@ -221,7 +229,7 @@ cst_wave *lpc_resynth_fixedpoint(cst_lpcres *lpcres)
 	/* resynthesis the signal */
 	for (j=0; j < pm_size_samps; j++,r++)
 	{
-	    outbuf[o] = (int)ulaw_to_short_table[lpcres->residual[r]];
+            outbuf[o] = (int)ulaw_to_short_table[lpcres->residual[r]];
 	    outbuf[o] *= 16384;
 	    cr = (o == 0 ? lpcres->num_channels : o-1);
 	    for (ci=0; ci < lpcres->num_channels; ci++)
@@ -231,25 +239,30 @@ cst_wave *lpc_resynth_fixedpoint(cst_lpcres *lpcres)
 	    }
 	    outbuf[o] /= 16384;
 	    w->samples[r] = (short)outbuf[o];
-	    pp = outbuf[o];
 	    o = (o == lpcres->num_channels ? 0 : o+1);
 	}
         if (lpcres->asi && (r-stream_mark > lpcres->asi->min_buffsize))
         {
              rc = (*lpcres->asi->asc)(w,stream_mark,r-stream_mark,0,
-                                 lpcres->asi->userdata);
+                                 lpcres->asi);
              stream_mark = r;
         }
     }
 
     if ((lpcres->asi) && (rc == CST_AUDIO_STREAM_CONT))
-        (*lpcres->asi->asc)(w,stream_mark,r-stream_mark,1,lpcres->asi->userdata);
+        (*lpcres->asi->asc)(w,stream_mark,r-stream_mark,1,lpcres->asi);
 
     cst_free(outbuf);
     cst_free(lpccoefs);
     w->num_samples = r;  /* just to be safe */
 
-    return w;
+    if (rc == CST_AUDIO_STREAM_STOP)
+    {
+        delete_wave(w);
+        return NULL;
+    }
+    else
+        return w;
 
 }
 
@@ -261,7 +274,6 @@ cst_wave *lpc_resynth_sfp(cst_lpcres *lpcres)
     int ci,cr;
     int *outbuf, *lpccoefs;
     int pm_size_samps, ilpc_min, ilpc_range;
-    int pp = 0;
 
     /* Get a new wave to build the signal into */
     w = new_wave();
@@ -294,7 +306,6 @@ cst_wave *lpc_resynth_sfp(cst_lpcres *lpcres)
 		cr = (cr == 0 ? lpcres->num_channels : cr-1);
 	    }
 	    w->samples[r] = (short)outbuf[o];
-	    pp = outbuf[o];
 	    o = (o == lpcres->num_channels ? 0 : o+1);
 	}
     }

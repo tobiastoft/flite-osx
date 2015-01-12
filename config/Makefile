@@ -38,7 +38,7 @@ TOP=..
 DIRNAME=config
 BUILD_DIRS = 
 ALL_DIRS=
-LVMODULES = all.lv default.lv transtac.lv
+LVMODULES = all.lv default.lv transtac.lv android.lv ben.lv bolt.lv
 FILES = Makefile common_make_rules project.mak config.in system.mak.in \
         $(LVMODULES)
 

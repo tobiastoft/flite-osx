@@ -153,6 +153,12 @@ typedef struct {
 unsigned char cst_short_to_ulaw(short sample);
 short cst_ulaw_to_short(unsigned char ulawbyte);
 
+#define CST_G721_LEADIN 8
+unsigned char *cst_g721_decode(int *actual_size,int size, 
+                               const unsigned char *packed_residual);
+unsigned char *cst_g721_encode(int *packed_size,int actual_size, 
+                               const unsigned char *unpacked_residual);
+
 CST_VAL_USER_TYPE_DCLS(wave,cst_wave)
 
 #endif
